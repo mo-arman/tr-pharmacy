@@ -12,6 +12,29 @@ function lsSet(key, val) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+//  ADMIN CREDENTIALS  (change these to your own secure values)
+// ─────────────────────────────────────────────────────────────────────────────
+const ADMIN_USER = "trpharmacy_admin";
+const ADMIN_PASS = "TRPharma@2026";
+const SESSION_KEY = "trp_admin_session";
+
+// Validate session — checks localStorage token
+function isSessionValid() {
+  try {
+    const s = JSON.parse(localStorage.getItem(SESSION_KEY) || "null");
+    if (!s) return false;
+    // Session expires after 8 hours
+    return s.token === btoa(ADMIN_USER + ADMIN_PASS) && Date.now() - s.at < 8 * 60 * 60 * 1000;
+  } catch { return false; }
+}
+function createSession() {
+  localStorage.setItem(SESSION_KEY, JSON.stringify({ token: btoa(ADMIN_USER + ADMIN_PASS), at: Date.now() }));
+}
+function clearSession() {
+  localStorage.removeItem(SESSION_KEY);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 //  DEFAULT DATA  (used only on first ever load — after that localStorage wins)
 // ─────────────────────────────────────────────────────────────────────────────
 const DEFAULT_MEDS = [
@@ -257,9 +280,110 @@ function InlineEdit({ value, onChange, style={}, multiline=false, placeholder="C
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+//  ADMIN LOGIN MODAL
+// ─────────────────────────────────────────────────────────────────────────────
+const AdminLoginModal = React.memo(function AdminLoginModal({ onSuccess, onClose }) {
+  const [user, setUser]   = useState("");
+  const [pass, setPass]   = useState("");
+  const [err,  setErr]    = useState("");
+  const [showPw, setShowPw] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const inp = mkInp();
+
+  const handleLogin = () => {
+    if (!user.trim() || !pass.trim()) { setErr("Please enter username and password."); return; }
+    setLoading(true);
+    setErr("");
+    // Simulate async check (prevents brute-force timing)
+    setTimeout(() => {
+      if (user === ADMIN_USER && pass === ADMIN_PASS) {
+        createSession();
+        onSuccess();
+      } else {
+        setErr("❌ Invalid username or password.");
+        setPass("");
+      }
+      setLoading(false);
+    }, 600);
+  };
+
+  return (
+    <div
+      style={{ position:"fixed",inset:0,background:"rgba(0,0,0,.7)",zIndex:600,display:"flex",alignItems:"center",justifyContent:"center",padding:16,animation:"fadeIn .2s ease" }}
+      onClick={onClose}
+    >
+      <div
+        style={{ background:"var(--bg2)",borderRadius:22,width:"min(400px,100%)",overflow:"hidden",animation:"popIn .3s cubic-bezier(.22,1,.36,1) both",boxShadow:"0 24px 64px rgba(0,0,0,.35)" }}
+        onClick={e => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div style={{ background:"linear-gradient(135deg,#4f46e5,#059669)",padding:"28px 28px 22px",textAlign:"center",position:"relative" }}>
+          <button onClick={onClose} style={{ position:"absolute",top:14,right:14,background:"rgba(255,255,255,.2)",border:"none",borderRadius:50,width:28,height:28,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:"#fff" }}><CloseIcon/></button>
+          <div style={{ width:56,height:56,borderRadius:16,background:"rgba(255,255,255,.15)",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 12px",fontSize:26 }}>🛡️</div>
+          <h2 style={{ color:"#fff",fontWeight:900,fontSize:20,marginBottom:4 }}>Admin Login</h2>
+          <p style={{ color:"rgba(255,255,255,.7)",fontSize:12 }}>TR Pharmacy — Secure Access</p>
+        </div>
+
+        {/* Form */}
+        <div style={{ padding:"24px 26px 28px",display:"flex",flexDirection:"column",gap:14 }}>
+          {err && (
+            <div style={{ background:"#fee2e2",border:"1px solid #fca5a5",borderRadius:10,padding:"10px 14px",fontSize:13,color:"#dc2626",fontWeight:600,animation:"popIn .3s ease" }}>
+              {err}
+            </div>
+          )}
+          <div>
+            <label style={{ fontWeight:700,fontSize:12,marginBottom:5,display:"block",color:"var(--text2)" }}>USERNAME</label>
+            <input
+              style={{ ...inp, fontSize:14 }}
+              type="text"
+              placeholder="Enter admin username"
+              value={user}
+              onChange={e => { setUser(e.target.value); setErr(""); }}
+              onKeyDown={e => e.key === "Enter" && handleLogin()}
+              autoComplete="off"
+            />
+          </div>
+          <div>
+            <label style={{ fontWeight:700,fontSize:12,marginBottom:5,display:"block",color:"var(--text2)" }}>PASSWORD</label>
+            <div style={{ position:"relative" }}>
+              <input
+                style={{ ...inp, fontSize:14, paddingRight:42 }}
+                type={showPw ? "text" : "password"}
+                placeholder="Enter admin password"
+                value={pass}
+                onChange={e => { setPass(e.target.value); setErr(""); }}
+                onKeyDown={e => e.key === "Enter" && handleLogin()}
+                autoComplete="current-password"
+              />
+              <button
+                onClick={() => setShowPw(s => !s)}
+                style={{ position:"absolute",right:12,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",cursor:"pointer",color:"var(--text2)",fontSize:16,padding:0 }}
+              >{showPw ? "🙈" : "👁️"}</button>
+            </div>
+          </div>
+
+          <button
+            style={{ ...mkBtn(),padding:"13px",fontSize:15,justifyContent:"center",width:"100%",opacity:loading?0.7:1,transition:"opacity .2s" }}
+            className="hbtn"
+            onClick={handleLogin}
+            disabled={loading}
+          >
+            {loading ? "Verifying…" : "🔓 Login as Admin"}
+          </button>
+
+          <p style={{ textAlign:"center",fontSize:11,color:"var(--text2)",marginTop:2 }}>
+            This area is restricted to authorised personnel only.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
 //  ADMIN PANEL  (full management: medicines, services, testimonials, faqs, contact)
 // ─────────────────────────────────────────────────────────────────────────────
-const AdminPanel = React.memo(function AdminPanel({ meds, services, testimonials, faqs, contact, onClose, onToast, onUpdateMeds, onUpdateServices, onUpdateTestimonials, onUpdateFaqs, onUpdateContact, onUploadImg }) {
+const AdminPanel = React.memo(function AdminPanel({ meds, services, testimonials, faqs, contact, onClose, onToast, onUpdateMeds, onUpdateServices, onUpdateTestimonials, onUpdateFaqs, onUpdateContact, onUploadImg, onLogout }) {
   const [tab, setTab] = useState("meds");
   const card = mkCard();
   const btn  = mkBtn;
@@ -372,9 +496,12 @@ const AdminPanel = React.memo(function AdminPanel({ meds, services, testimonials
         <div style={{ background:"linear-gradient(135deg,#4f46e5,#059669)",padding:"16px 22px",display:"flex",justifyContent:"space-between",alignItems:"center",flexShrink:0 }}>
           <div>
             <div style={{ color:"#fff",fontWeight:900,fontSize:17,display:"flex",alignItems:"center",gap:8 }}><AdminIcon/> Admin Panel — TR Pharmacy</div>
-            <div style={{ color:"rgba(255,255,255,.7)",fontSize:11,marginTop:1 }}>Sab kuch yahan se manage karo — changes automatically save hote hain</div>
+            <div style={{ color:"rgba(255,255,255,.7)",fontSize:11,marginTop:1 }}>✅ Logged in as <b>trpharmacy_admin</b> · Session expires in 8h</div>
           </div>
-          <button onClick={onClose} style={{ background:"rgba(255,255,255,.2)",border:"none",borderRadius:50,width:30,height:30,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:"#fff" }}><CloseIcon/></button>
+          <div style={{ display:"flex",gap:8,alignItems:"center" }}>
+            <button onClick={onLogout} style={{ background:"rgba(255,255,255,.15)",border:"1px solid rgba(255,255,255,.3)",borderRadius:8,padding:"5px 12px",cursor:"pointer",color:"#fff",fontSize:12,fontWeight:700,display:"flex",alignItems:"center",gap:5 }}>⏻ Logout</button>
+            <button onClick={onClose} style={{ background:"rgba(255,255,255,.2)",border:"none",borderRadius:50,width:30,height:30,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:"#fff" }}><CloseIcon/></button>
+          </div>
         </div>
 
         {/* Tabs */}
@@ -734,7 +861,7 @@ const CartPanel = React.memo(function CartPanel({ cart, cartStep, setCartStep, c
 // ─────────────────────────────────────────────────────────────────────────────
 //  NAV
 // ─────────────────────────────────────────────────────────────────────────────
-const Nav = React.memo(function Nav({ dark, setDark, page, go, cartCount, onCartOpen, onDBOpen, onAdminOpen }) {
+const Nav = React.memo(function Nav({ dark, setDark, page, go, cartCount, onCartOpen, onDBOpen, onAdminOpen, isAdmin, onLogout }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const pages = [["home","🏠 Home"],["about","ℹ️ About"],["medicines","💊 Medicines"],["prescription","📋 Rx Upload"],["services","🩺 Services"],["contact","📞 Contact"],["opening","✅ Grand Opening"]];
   const navGo = (p) => { go(p); setMenuOpen(false); };
@@ -759,14 +886,28 @@ const Nav = React.memo(function Nav({ dark, setDark, page, go, cartCount, onCart
           <button onClick={onCartOpen} style={{ position:"relative",width:32,height:32,borderRadius:7,border:"1px solid var(--bdr)",background:"var(--bg2)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:"var(--text2)" }}>
             <CartIcon/>{cartCount>0&&<span style={{ position:"absolute",top:-5,right:-5,width:16,height:16,borderRadius:8,background:"#ef4444",color:"#fff",fontSize:9,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center" }}>{cartCount}</span>}
           </button>
-          <button onClick={onDBOpen} title="Submissions" style={{ width:32,height:32,borderRadius:7,border:"1px solid var(--bdr)",background:"var(--bg2)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14 }} className="hbtn">📬</button>
-          <button onClick={onAdminOpen} title="Admin Panel" style={{ width:32,height:32,borderRadius:7,border:"1px solid rgba(99,102,241,.5)",background:"linear-gradient(135deg,#4f46e5,#059669)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",fontSize:13 }} className="hbtn admin-badge"><AdminIcon/></button>
+          {isAdmin && <button onClick={onDBOpen} title="Submissions" style={{ width:32,height:32,borderRadius:7,border:"1px solid var(--bdr)",background:"var(--bg2)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14 }} className="hbtn">📬</button>}
+          {isAdmin ? (
+            <div style={{ display:"flex",gap:5,alignItems:"center" }}>
+              <button onClick={onAdminOpen} title="Admin Panel" style={{ height:32,padding:"0 12px",borderRadius:7,border:"1px solid rgba(99,102,241,.4)",background:"linear-gradient(135deg,#4f46e5,#059669)",cursor:"pointer",display:"flex",alignItems:"center",gap:5,color:"#fff",fontSize:12,fontWeight:700 }} className="hbtn admin-badge"><AdminIcon/><span className="hide-mobile">Admin</span></button>
+              <button onClick={onLogout} title="Logout" style={{ height:32,padding:"0 10px",borderRadius:7,border:"1px solid #fca5a5",background:"#fee2e2",cursor:"pointer",display:"flex",alignItems:"center",gap:4,color:"#dc2626",fontSize:12,fontWeight:700 }} className="hbtn">⏻</button>
+            </div>
+          ) : (
+            <button onClick={onAdminOpen} title="Admin Login" style={{ width:32,height:32,borderRadius:7,border:"1px solid var(--bdr)",background:"var(--bg2)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:"var(--text2)",fontSize:14 }} className="hbtn">🔐</button>
+          )}
           <button onClick={()=>setMenuOpen(o=>!o)} style={{ width:34,height:34,borderRadius:8,border:"1px solid var(--bdr)",background:menuOpen?"#059669":"var(--bg2)",cursor:"pointer",display:"none",alignItems:"center",justifyContent:"center",color:menuOpen?"#fff":"var(--text2)",transition:"all .2s" }} className="mob-ham" aria-label="Menu"><HamburgerIcon open={menuOpen}/></button>
         </div>
       </div>
       <div className={`mob-menu${menuOpen?" open":""}`}>
         {pages.map(([p,l])=>(<button key={p} onClick={()=>navGo(p)} className={`nav-item${page===p?" active":""}`}>{l}</button>))}
-        <button onClick={()=>{onAdminOpen();setMenuOpen(false);}} style={{ display:"block",width:"100%",textAlign:"left",padding:"11px 15px",borderRadius:11,marginBottom:3,fontWeight:700,fontSize:13,cursor:"pointer",border:"none",background:"rgba(79,70,229,.1)",color:"#4f46e5" }}>⚙️ Admin Panel</button>
+        {isAdmin ? (
+          <div style={{ display:"flex",gap:7,padding:"6px 0 4px" }}>
+            <button onClick={()=>{onAdminOpen();setMenuOpen(false);}} style={{ flex:1,padding:"10px 14px",borderRadius:11,fontWeight:700,fontSize:13,cursor:"pointer",border:"none",background:"rgba(79,70,229,.1)",color:"#4f46e5" }}>⚙️ Admin Panel</button>
+            <button onClick={()=>{onLogout();setMenuOpen(false);}} style={{ padding:"10px 14px",borderRadius:11,fontWeight:700,fontSize:13,cursor:"pointer",border:"none",background:"#fee2e2",color:"#dc2626" }}>⏻ Logout</button>
+          </div>
+        ) : (
+          <button onClick={()=>{onAdminOpen();setMenuOpen(false);}} style={{ display:"block",width:"100%",textAlign:"left",padding:"11px 15px",borderRadius:11,marginBottom:3,fontWeight:700,fontSize:13,cursor:"pointer",border:"none",background:"rgba(0,0,0,.04)",color:"var(--text2)" }}>🔐 Admin Login</button>
+        )}
         <div className="mob-bottom">
           <a href="tel:6389482072">📞 Call Now</a>
           <a href="https://wa.me/916389482072" target="_blank" rel="noreferrer" className="wa">💬 WhatsApp</a>
@@ -779,7 +920,7 @@ const Nav = React.memo(function Nav({ dark, setDark, page, go, cartCount, onCart
 // ─────────────────────────────────────────────────────────────────────────────
 //  PAGE COMPONENTS  (all receive dynamic data via props)
 // ─────────────────────────────────────────────────────────────────────────────
-const HomePage = React.memo(function HomePage({ go, meds, services, testimonials, faqs, contact, onAddCart, onToast, onUploadImg, onRemoveImg }) {
+const HomePage = React.memo(function HomePage({ go, meds, services, testimonials, faqs, contact, onAddCart, onToast, onUploadImg, onRemoveImg, isAdmin }) {
   const [tIdx, setTIdx] = useState(0);
   const [faq, setFaq]   = useState(null);
   const [nl, setNl]     = useState("");
@@ -853,9 +994,11 @@ const HomePage = React.memo(function HomePage({ go, meds, services, testimonials
             <div key={m.id} style={{ ...card,padding:0,overflow:"hidden" }} className="lift">
               <div style={{ height:118,background:"linear-gradient(135deg,#d1fae5,#e0f2fe)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:46,overflow:"hidden",position:"relative" }}>
                 {m.img?<img src={m.img} alt={m.name} style={{ width:"100%",height:"100%",objectFit:"cover" }}/>:m.emoji}
-                <label htmlFor={`h-img-${m.id}`} className="med-img-overlay" style={{ position:"absolute",inset:0,background:"rgba(0,0,0,.5)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",cursor:"pointer",opacity:0,color:"#fff",gap:4 }} onMouseEnter={e=>e.currentTarget.style.opacity="1"} onMouseLeave={e=>e.currentTarget.style.opacity="0"}><CameraIcon/><span style={{ fontSize:9,fontWeight:700 }}>{m.img?"Change":"Upload"}</span></label>
-                <input id={`h-img-${m.id}`} type="file" accept="image/*" style={{ display:"none" }} onChange={e=>onUploadImg(m.id,e.target.files[0])}/>
-                {m.img&&<button onClick={e=>{e.stopPropagation();onRemoveImg(m.id);}} style={{ position:"absolute",top:4,right:4,background:"rgba(239,68,68,.85)",border:"none",borderRadius:50,width:18,height:18,cursor:"pointer",color:"#fff",fontSize:9,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center" }}>✕</button>}
+                {isAdmin && <>
+                  <label htmlFor={`h-img-${m.id}`} className="med-img-overlay" style={{ position:"absolute",inset:0,background:"rgba(0,0,0,.5)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",cursor:"pointer",opacity:0,color:"#fff",gap:4 }} onMouseEnter={e=>e.currentTarget.style.opacity="1"} onMouseLeave={e=>e.currentTarget.style.opacity="0"}><CameraIcon/><span style={{ fontSize:9,fontWeight:700 }}>{m.img?"Change":"Upload"}</span></label>
+                  <input id={`h-img-${m.id}`} type="file" accept="image/*" style={{ display:"none" }} onChange={e=>onUploadImg(m.id,e.target.files[0])}/>
+                  {m.img&&<button onClick={e=>{e.stopPropagation();onRemoveImg(m.id);}} style={{ position:"absolute",top:4,right:4,background:"rgba(239,68,68,.85)",border:"none",borderRadius:50,width:18,height:18,cursor:"pointer",color:"#fff",fontSize:9,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center" }}>✕</button>}
+                </>}
               </div>
               <div style={{ padding:"11px 14px 14px" }}>
                 <div style={{ display:"flex",justifyContent:"space-between",marginBottom:4 }}><span style={tag("g")}>{m.tag}</span><span style={{ fontSize:10,color:"var(--text2)" }}>{m.category}</span></div>
@@ -992,7 +1135,7 @@ const AboutPage = React.memo(function AboutPage({ go, contact }) {
   );
 });
 
-const MedicinesPage = React.memo(function MedicinesPage({ go, meds, onAddCart, onUploadImg, onRemoveImg, onAdminOpen }) {
+const MedicinesPage = React.memo(function MedicinesPage({ go, meds, onAddCart, onUploadImg, onRemoveImg, onAdminOpen, isAdmin }) {
   const [search, setSearch]     = useState("");
   const [catFilter, setCatFilter] = useState("All");
   const card=mkCard(); const btn=mkBtn; const tag=mkTag;
@@ -1019,9 +1162,11 @@ const MedicinesPage = React.memo(function MedicinesPage({ go, meds, onAddCart, o
         </div>
         <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20,flexWrap:"wrap",gap:8 }}>
           {search&&<div style={{ fontSize:12,color:"var(--text2)" }}>Showing <b style={{ color:"var(--text)" }}>{filtered.length}</b> result{filtered.length!==1?"s":""} for "<b>{search}</b>"</div>}
-          <div style={{ marginLeft:"auto",display:"flex",gap:8 }}>
-            <button style={{ ...btn(),fontSize:12,padding:"7px 16px",gap:6 }} className="hbtn" onClick={onAdminOpen}>➕ Add / Edit Medicine</button>
-          </div>
+          {isAdmin && (
+            <div style={{ marginLeft:"auto",display:"flex",gap:8 }}>
+              <button style={{ ...btn(),fontSize:12,padding:"7px 16px",gap:6 }} className="hbtn" onClick={onAdminOpen}>➕ Add / Edit Medicine</button>
+            </div>
+          )}
         </div>
         {filtered.length===0
           ?<div style={{ textAlign:"center",padding:"50px 0" }}><div style={{ fontSize:44,marginBottom:12 }}>🔍</div><h3 style={{ fontWeight:800,marginBottom:6 }}>No medicines found</h3><button style={btn("out")} onClick={()=>{setSearch("");setCatFilter("All");}}>Clear Filters</button></div>
@@ -1030,9 +1175,11 @@ const MedicinesPage = React.memo(function MedicinesPage({ go, meds, onAddCart, o
               <div key={m.id} style={{ ...card,padding:0,overflow:"hidden" }} className="lift">
                 <div style={{ height:128,background:"linear-gradient(135deg,#d1fae5,#e0f2fe)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:46,position:"relative",overflow:"hidden" }}>
                   {m.img?<img src={m.img} alt={m.name} style={{ width:"100%",height:"100%",objectFit:"cover" }}/>:m.emoji}
-                  <label htmlFor={`mi-${m.id}`} className="med-img-overlay" style={{ position:"absolute",inset:0,background:"rgba(0,0,0,.5)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",cursor:"pointer",opacity:0,color:"#fff",gap:4 }} onMouseEnter={e=>e.currentTarget.style.opacity="1"} onMouseLeave={e=>e.currentTarget.style.opacity="0"}><CameraIcon/><span style={{ fontSize:9,fontWeight:700 }}>{m.img?"Change":"Upload"}</span></label>
-                  <input id={`mi-${m.id}`} type="file" accept="image/*" style={{ display:"none" }} onChange={e=>onUploadImg(m.id,e.target.files[0])}/>
-                  {m.img&&<button onClick={e=>{e.stopPropagation();onRemoveImg(m.id);}} style={{ position:"absolute",top:5,right:5,background:"rgba(239,68,68,.85)",border:"none",borderRadius:50,width:19,height:19,cursor:"pointer",color:"#fff",fontSize:10,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center" }}>✕</button>}
+                  {isAdmin && <>
+                    <label htmlFor={`mi-${m.id}`} className="med-img-overlay" style={{ position:"absolute",inset:0,background:"rgba(0,0,0,.5)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",cursor:"pointer",opacity:0,color:"#fff",gap:4 }} onMouseEnter={e=>e.currentTarget.style.opacity="1"} onMouseLeave={e=>e.currentTarget.style.opacity="0"}><CameraIcon/><span style={{ fontSize:9,fontWeight:700 }}>{m.img?"Change":"Upload"}</span></label>
+                    <input id={`mi-${m.id}`} type="file" accept="image/*" style={{ display:"none" }} onChange={e=>onUploadImg(m.id,e.target.files[0])}/>
+                    {m.img&&<button onClick={e=>{e.stopPropagation();onRemoveImg(m.id);}} style={{ position:"absolute",top:5,right:5,background:"rgba(239,68,68,.85)",border:"none",borderRadius:50,width:19,height:19,cursor:"pointer",color:"#fff",fontSize:10,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center" }}>✕</button>}
+                  </>}
                 </div>
                 <div style={{ padding:"12px 14px 14px" }}>
                   <div style={{ display:"flex",justifyContent:"space-between",marginBottom:4 }}><span style={tag("g")}>{m.tag}</span><span style={{ fontSize:10,color:"var(--text2)" }}>{m.category}</span></div>
@@ -1102,15 +1249,17 @@ const PrescriptionPage = React.memo(function PrescriptionPage({ go, onToast }) {
   );
 });
 
-const ServicesPage = React.memo(function ServicesPage({ go, services, onAdminOpen }) {
+const ServicesPage = React.memo(function ServicesPage({ go, services, onAdminOpen, isAdmin }) {
   const card=mkCard(); const btn=mkBtn; const tag=mkTag;
   return (
     <div className="pg">
       <div style={mkHero("#0c4a6e","#064e3b")}><h1 style={{ color:"#fff",fontSize:"clamp(24px,5vw,40px)",fontWeight:900,marginBottom:8 }}>Our Services</h1><p style={{ color:"#a7f3d0",fontSize:14 }}>Complete healthcare solutions for you and your family</p></div>
       <section style={{ maxWidth:1200,margin:"0 auto",padding:"clamp(32px,5vw,54px) 20px" }}>
-        <div style={{ textAlign:"right",marginBottom:20 }}>
-          <button style={{ ...btn(),fontSize:12,padding:"7px 16px" }} className="hbtn" onClick={onAdminOpen}>⚙️ Add / Edit Services</button>
-        </div>
+        {isAdmin && (
+          <div style={{ textAlign:"right",marginBottom:20 }}>
+            <button style={{ ...btn(),fontSize:12,padding:"7px 16px" }} className="hbtn" onClick={onAdminOpen}>⚙️ Add / Edit Services</button>
+          </div>
+        )}
         <div className="g3 card-grid">
           {services.map(s=>(
             <div key={s.id} style={{ ...card,padding:28 }} className="lift">
@@ -1135,7 +1284,7 @@ const ServicesPage = React.memo(function ServicesPage({ go, services, onAdminOpe
   );
 });
 
-const ContactPage = React.memo(function ContactPage({ onToast, contact, onAdminOpen }) {
+const ContactPage = React.memo(function ContactPage({ onToast, contact, onAdminOpen, isAdmin }) {
   const [form, setForm] = useState({ name:"",email:"",phone:"",msg:"" });
   const [done, setDone] = useState(false);
   const card=mkCard(); const btn=mkBtn; const inp=mkInp();
@@ -1150,9 +1299,11 @@ const ContactPage = React.memo(function ContactPage({ onToast, contact, onAdminO
     <div className="pg">
       <div style={mkHero("#064e3b","#0c4a6e")}><h1 style={{ color:"#fff",fontSize:"clamp(24px,5vw,40px)",fontWeight:900,marginBottom:8 }}>Contact Us</h1><p style={{ color:"#a7f3d0",fontSize:14 }}>We're here for all your healthcare needs</p></div>
       <section style={{ maxWidth:1200,margin:"0 auto",padding:"clamp(32px,5vw,54px) 20px" }}>
-        <div style={{ textAlign:"right",marginBottom:16 }}>
-          <button style={{ ...btn("ghost"),fontSize:12,padding:"6px 14px",border:"1px solid var(--bdr)" }} className="hbtn" onClick={onAdminOpen}>⚙️ Edit Contact Details</button>
-        </div>
+        {isAdmin && (
+          <div style={{ textAlign:"right",marginBottom:16 }}>
+            <button style={{ ...btn("ghost"),fontSize:12,padding:"6px 14px",border:"1px solid var(--bdr)" }} className="hbtn" onClick={onAdminOpen}>⚙️ Edit Contact Details</button>
+          </div>
+        )}
         <div className="cg">
           <div>
             <h3 style={{ fontSize:17,fontWeight:900,marginBottom:16 }}>Get In Touch</h3>
@@ -1193,7 +1344,7 @@ const ContactPage = React.memo(function ContactPage({ onToast, contact, onAdminO
   );
 });
 
-const OpeningPage = React.memo(function OpeningPage({ contact }) {
+const OpeningPage = React.memo(function OpeningPage({ contact, isAdmin }) {
   const [bannerVisible, setBannerVisible] = useState(()=>lsGet("trp_banner",true));
   const [photos, setPhotos] = useState(()=>lsGet("trp_opening_photos",[]));
   const [lightbox, setLightbox] = useState(null);
@@ -1238,8 +1389,10 @@ const OpeningPage = React.memo(function OpeningPage({ contact }) {
         <div style={card}>
           <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16,flexWrap:"wrap",gap:8 }}>
             <div><h3 style={{ fontWeight:900,fontSize:15,marginBottom:2 }}>📸 Grand Opening Photos</h3><p style={{ color:"var(--text2)",fontSize:11 }}>{photos.length===0?"Upload photos from the opening day":""+photos.length+" photo(s) saved permanently"}</p></div>
-            <label htmlFor="opening-photos" style={{ ...btn(),cursor:"pointer",fontSize:12,padding:"8px 16px" }}>📤 Upload Photos</label>
-            <input id="opening-photos" type="file" accept="image/*" multiple style={{ display:"none" }} onChange={e=>handlePhotoUpload(e.target.files)}/>
+            {isAdmin && <>
+              <label htmlFor="opening-photos" style={{ ...btn(),cursor:"pointer",fontSize:12,padding:"8px 16px" }}>📤 Upload Photos</label>
+              <input id="opening-photos" type="file" accept="image/*" multiple style={{ display:"none" }} onChange={e=>handlePhotoUpload(e.target.files)}/>
+            </>}
           </div>
           {photos.length===0
             ?<label htmlFor="opening-photos" style={{ display:"block",cursor:"pointer" }}><div style={{ border:"2px dashed var(--bdr)",borderRadius:12,padding:"32px 20px",textAlign:"center",background:"var(--bg3)" }} onMouseEnter={e=>e.currentTarget.style.borderColor="#059669"} onMouseLeave={e=>e.currentTarget.style.borderColor="var(--bdr)"}><div style={{ fontSize:40,marginBottom:10 }}>📷</div><p style={{ fontWeight:700,fontSize:14,marginBottom:3 }}>Drop opening day photos here</p><p style={{ color:"var(--text2)",fontSize:11 }}>Multiple files · Saved permanently</p></div></label>
@@ -1275,7 +1428,7 @@ const OpeningPage = React.memo(function OpeningPage({ contact }) {
             <span style={{ color:"rgba(255,255,255,.65)",fontSize:12 }}>📷 {photos[lightbox].name} · {photos[lightbox].date}</span>
             <div style={{ display:"flex",gap:8 }}>
               <span style={{ color:"rgba(255,255,255,.45)",fontSize:11 }}>{lightbox+1}/{photos.length}</span>
-              <button onClick={()=>deletePhoto(photos[lightbox].id)} style={{ background:"#ef4444",border:"none",borderRadius:7,cursor:"pointer",color:"#fff",padding:"5px 10px",fontSize:11,fontWeight:700 }}>🗑️ Delete</button>
+              {isAdmin && <button onClick={()=>deletePhoto(photos[lightbox].id)} style={{ background:"#ef4444",border:"none",borderRadius:7,cursor:"pointer",color:"#fff",padding:"5px 10px",fontSize:11,fontWeight:700 }}>🗑️ Delete</button>}
               <button onClick={()=>setLightbox(null)} style={{ background:"rgba(255,255,255,.15)",border:"none",borderRadius:7,cursor:"pointer",color:"#fff",padding:"5px 10px",fontSize:11,fontWeight:700 }}>✕</button>
             </div>
           </div>
@@ -1334,16 +1487,45 @@ const Footer = React.memo(function Footer({ go, services, contact }) {
 //  APP  — central state + localStorage persistence
 // ─────────────────────────────────────────────────────────────────────────────
 export default function App() {
-  const [page,     setPage]    = useState("home");
-  const [dark,     setDark]    = useState(false);
-  const [cart,     setCart]    = useState([]);
-  const [cartOpen, setCartOpen] = useState(false);
-  const [cartStep, setCartStep] = useState("items");
-  const [cartAddr, setCartAddr] = useState({ name:"",phone:"",address:"",pincode:"" });
-  const [payMode,  setPayMode]  = useState("cod");
-  const [showDB,   setShowDB]   = useState(false);
-  const [showAdmin,setShowAdmin]= useState(false);
-  const [toast,    setToast]    = useState(null);
+  const [page,      setPage]     = useState("home");
+  const [dark,      setDark]     = useState(false);
+  const [cart,      setCart]     = useState([]);
+  const [cartOpen,  setCartOpen] = useState(false);
+  const [cartStep,  setCartStep] = useState("items");
+  const [cartAddr,  setCartAddr] = useState({ name:"",phone:"",address:"",pincode:"" });
+  const [payMode,   setPayMode]  = useState("cod");
+  const [showDB,    setShowDB]   = useState(false);
+  const [showAdmin, setShowAdmin]= useState(false);
+  const [showLogin, setShowLogin]= useState(false);
+  const [toast,     setToast]    = useState(null);
+
+  // ── Admin auth — check saved session on load ───────────────────────────────
+  const [isAdmin, setIsAdmin] = useState(() => isSessionValid());
+
+  const handleAdminLogin = useCallback(() => {
+    setIsAdmin(true);
+    setShowLogin(false);
+    setShowAdmin(true);
+  }, []);
+
+  const handleAdminLogout = useCallback(() => {
+    clearSession();
+    setIsAdmin(false);
+    setShowAdmin(false);
+    setShowLogin(false);
+  }, []);
+
+  // Guard: clicking admin open — show login if not authed
+  const onAdminOpen = useCallback(() => {
+    if (isSessionValid()) {
+      setIsAdmin(true);
+      setShowAdmin(true);
+    } else {
+      setIsAdmin(false);
+      setShowLogin(true);
+    }
+  }, []);
+  const onAdminClose = useCallback(() => setShowAdmin(false), []);
 
   // ── All dynamic data loaded from localStorage on first render ──────────────
   const [meds,         setMeds]         = useState(() => { const imgs=lsGet("trp_med_imgs",{}); const base=DEFAULT_MEDS.map(m=>({...m,img:imgs[m.id]||null})); const custom=lsGet("trp_custom_meds",[]).map(m=>({...m,img:imgs[m.id]||null})); return [...base,...custom]; });
@@ -1379,8 +1561,7 @@ export default function App() {
   const onCartClose = useCallback(()=>setCartOpen(false),[]);
   const onDBOpen    = useCallback(()=>setShowDB(true),[]);
   const onDBClose   = useCallback(()=>setShowDB(false),[]);
-  const onAdminOpen = useCallback(()=>setShowAdmin(true),[]);
-  const onAdminClose= useCallback(()=>setShowAdmin(false),[]);
+
 
   const onAddCart  = useCallback((m)=>{ setCart(c=>{ const ex=c.find(i=>i.id===m.id); return ex?c.map(i=>i.id===m.id?{...i,qty:i.qty+1}:i):[...c,{...m,qty:1}]; }); showToast(`${m.name} added! 🛒`); },[showToast]);
   const onUpdQty   = useCallback((id,d)=>setCart(c=>c.map(i=>i.id===id?{...i,qty:Math.max(1,i.qty+d)}:i)),[]);
@@ -1393,22 +1574,22 @@ export default function App() {
   const rootStyle = useMemo(()=>({...cssVars,fontFamily:"'Nunito','Segoe UI',sans-serif",background:"var(--bg)",color:"var(--text)",minHeight:"100vh",transition:"background .3s,color .3s"}),[cssVars]);
 
   const renderPage = () => {
-    const common = { go, onAddCart, onToast:showToast, contact };
+    const common = { go, onAddCart, onToast:showToast, contact, isAdmin };
     switch(page) {
       case "home":         return <HomePage         {...common} meds={meds} services={services} testimonials={testimonials} faqs={faqs} onUploadImg={onUploadImg} onRemoveImg={onRemoveImg}/>;
       case "about":        return <AboutPage        go={go} contact={contact}/>;
-      case "medicines":    return <MedicinesPage    go={go} meds={meds} onAddCart={onAddCart} onUploadImg={onUploadImg} onRemoveImg={onRemoveImg} onAdminOpen={onAdminOpen}/>;
+      case "medicines":    return <MedicinesPage    go={go} meds={meds} onAddCart={onAddCart} onUploadImg={onUploadImg} onRemoveImg={onRemoveImg} onAdminOpen={onAdminOpen} isAdmin={isAdmin}/>;
       case "prescription": return <PrescriptionPage go={go} onToast={showToast}/>;
-      case "services":     return <ServicesPage     go={go} services={services} onAdminOpen={onAdminOpen}/>;
-      case "contact":      return <ContactPage      onToast={showToast} contact={contact} onAdminOpen={onAdminOpen}/>;
-      case "opening":      return <OpeningPage      contact={contact}/>;
+      case "services":     return <ServicesPage     go={go} services={services} onAdminOpen={onAdminOpen} isAdmin={isAdmin}/>;
+      case "contact":      return <ContactPage      onToast={showToast} contact={contact} onAdminOpen={onAdminOpen} isAdmin={isAdmin}/>;
+      case "opening":      return <OpeningPage      contact={contact} isAdmin={isAdmin}/>;
       default:             return <HomePage         {...common} meds={meds} services={services} testimonials={testimonials} faqs={faqs} onUploadImg={onUploadImg} onRemoveImg={onRemoveImg}/>;
     }
   };
 
   return (
     <div style={rootStyle}>
-      <Nav dark={dark} setDark={setDark} page={page} go={go} cartCount={cartCount} onCartOpen={onCartOpen} onDBOpen={onDBOpen} onAdminOpen={onAdminOpen}/>
+      <Nav dark={dark} setDark={setDark} page={page} go={go} cartCount={cartCount} onCartOpen={onCartOpen} onDBOpen={onDBOpen} onAdminOpen={onAdminOpen} isAdmin={isAdmin} onLogout={handleAdminLogout}/>
 
       <div className="page-content">{renderPage()}</div>
 
@@ -1432,11 +1613,14 @@ export default function App() {
       {/* Cart */}
       {cartOpen&&<CartPanel cart={cart} cartStep={cartStep} setCartStep={setCartStep} cartAddr={cartAddr} setCartAddr={setCartAddr} payMode={payMode} setPayMode={setPayMode} onClose={onCartClose} onUpdQty={onUpdQty} onRemCart={onRemCart} onGoPage={go} onToast={showToast}/>}
 
-      {/* Submissions */}
-      {showDB&&<DBPanel onClose={onDBClose}/>}
+      {/* Submissions — admin only */}
+      {showDB && isAdmin && <DBPanel onClose={onDBClose}/>}
 
-      {/* Admin Panel */}
-      {showAdmin&&<AdminPanel meds={meds} services={services} testimonials={testimonials} faqs={faqs} contact={contact} onClose={onAdminClose} onToast={showToast} onUpdateMeds={saveMeds} onUpdateServices={saveServices} onUpdateTestimonials={saveTestimonials} onUpdateFaqs={saveFaqs} onUpdateContact={saveContact} onUploadImg={onUploadImg}/>}
+      {/* Login modal */}
+      {showLogin && !isAdmin && <AdminLoginModal onSuccess={handleAdminLogin} onClose={()=>setShowLogin(false)}/>}
+
+      {/* Admin Panel — only when authenticated */}
+      {showAdmin && isAdmin && <AdminPanel meds={meds} services={services} testimonials={testimonials} faqs={faqs} contact={contact} onClose={onAdminClose} onToast={showToast} onUpdateMeds={saveMeds} onUpdateServices={saveServices} onUpdateTestimonials={saveTestimonials} onUpdateFaqs={saveFaqs} onUpdateContact={saveContact} onUploadImg={onUploadImg} onLogout={handleAdminLogout}/>}
     </div>
   );
 }
