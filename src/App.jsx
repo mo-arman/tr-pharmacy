@@ -324,7 +324,13 @@ const globalCss = `
   .nav-link:hover::after,.nav-link.active::after{left:8%;right:8%;}
 
   /* ── HAMBURGER ── */
-  .mob-ham{transition:background .2s,transform .18s cubic-bezier(.22,1,.36,1)!important;}
+  .mob-ham{
+    transition:background .2s,transform .18s cubic-bezier(.22,1,.36,1)!important;
+    /* Force show on mobile — overrides inline display:none */
+  }
+  @media(max-width:768px){
+    .mob-ham{display:flex!important;}
+  }
   .mob-ham:hover{transform:scale(1.1) rotate(5deg)!important;}
   .mob-ham:active{transform:scale(.9)!important;}
 
@@ -511,6 +517,7 @@ const globalCss = `
     html{font-size:15px;}
     .desk-nav{display:none!important;}
     .mob-ham{display:flex!important;}
+    .hide-mobile{display:none!important;}
     .hg{grid-template-columns:1fr!important;gap:clamp(14px,4vw,22px)!important;}
     .fg{grid-template-columns:1fr 1fr!important;gap:clamp(12px,3vw,18px)!important;}
     .cg{grid-template-columns:1fr!important;gap:clamp(14px,4vw,20px)!important;}
@@ -820,7 +827,7 @@ const AdminPanel = React.memo(function AdminPanel({ meds, services, testimonials
         </div>
 
         {/* Tabs */}
-        <div style={{ display:"flex",overflowX:"auto",borderBottom:"1px solid var(--bdr)",flexShrink:0,background:"var(--bg2)" }}>
+        <div style={{ display:"flex",overflowX:"auto",borderBottom:"1px solid var(--bdr)",flexShrink:0,background:"var(--bg2)",WebkitOverflowScrolling:"touch",scrollbarWidth:"none" }}>
           {TABS.map(([id,label]) => (
             <button key={id} onClick={()=>setTab(id)} style={{ padding:"12px 18px",border:"none",cursor:"pointer",fontWeight:700,fontSize:12,background:tab===id?"var(--bg3)":"transparent",color:tab===id?"#059669":"var(--text2)",borderBottom:tab===id?"2px solid #059669":"2px solid transparent",whiteSpace:"nowrap",transition:"all .18s" }}>
               {label}
@@ -1176,168 +1183,182 @@ const SubscriptionModal = React.memo(function SubscriptionModal({ onClose, onToa
   const savedSub = lsGet("trp_subscription", null);
 
   return (
-    <div style={{ position:"fixed",inset:0,background:"rgba(0,0,0,.72)",zIndex:600,display:"flex",alignItems:"center",justifyContent:"center",padding:"clamp(8px,3vw,16px)",animation:"fadeIn .2s ease",overflowY:"auto" }} onClick={onClose}>
-      <div style={{ width:"min(860px,calc(100vw - 16px))",background:"var(--bg2)",borderRadius:22,overflow:"hidden",animation:"popIn .32s cubic-bezier(.22,1,.36,1)",boxShadow:"0 24px 80px rgba(0,0,0,.4)",maxHeight:"95vh",overflowY:"auto" }} onClick={e=>e.stopPropagation()}>
+    <div style={{ position:"fixed",inset:0,background:"rgba(0,0,0,.78)",zIndex:600,overflowY:"auto",animation:"fadeIn .2s ease" }} onClick={onClose}>
+      <div style={{
+        minHeight:"100%",display:"flex",alignItems:"flex-start",
+        justifyContent:"center",padding:"12px 10px 24px",
+        boxSizing:"border-box",
+      }}>
+        <div style={{
+          width:"100%",maxWidth:860,
+          background:"var(--bg2)",borderRadius:20,
+          overflow:"hidden",
+          animation:"popIn .3s cubic-bezier(.22,1,.36,1) both",
+          boxShadow:"0 20px 70px rgba(0,0,0,.45)",
+          marginTop:8,
+        }} onClick={e=>e.stopPropagation()}>
 
-        {/* Header */}
-        <div style={{ background:"linear-gradient(135deg,#059669,#0ea5e9)",padding:"24px 26px",position:"relative",textAlign:"center" }}>
-          <button onClick={onClose} style={{ position:"absolute",top:14,right:14,background:"rgba(255,255,255,.2)",border:"none",borderRadius:50,width:30,height:30,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:"#fff" }}><CloseIcon/></button>
-          <div style={{ fontSize:36,marginBottom:8 }}>💎</div>
-          <h2 style={{ color:"#fff",fontWeight:900,fontSize:22,marginBottom:4 }}>TR Pharmacy Membership Plans</h2>
-          <p style={{ color:"rgba(255,255,255,.8)",fontSize:13 }}>Join thousands of satisfied customers — Get priority service & exclusive benefits</p>
-          {savedSub && (
-            <div style={{ display:"inline-block",marginTop:10,background:"rgba(255,255,255,.2)",borderRadius:50,padding:"5px 16px",fontSize:12,color:"#fff",fontWeight:700 }}>
-              ✅ You are on <b>{savedSub.plan.toUpperCase()}</b> plan since {savedSub.startDate}
+          {/* Header */}
+          <div style={{ background:"linear-gradient(135deg,#059669,#0ea5e9)",padding:"20px 18px",position:"relative",textAlign:"center" }}>
+            <button onClick={onClose} style={{ position:"absolute",top:12,right:12,background:"rgba(255,255,255,.25)",border:"none",borderRadius:50,width:32,height:32,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",zIndex:1 }}><CloseIcon/></button>
+            <div style={{ fontSize:32,marginBottom:6 }}>💎</div>
+            <h2 style={{ color:"#fff",fontWeight:900,fontSize:"clamp(16px,5vw,22px)",marginBottom:4,lineHeight:1.2 }}>Membership Plans</h2>
+            <p style={{ color:"rgba(255,255,255,.82)",fontSize:"clamp(11px,3vw,13px)",lineHeight:1.4 }}>Priority service, discounts & exclusive benefits</p>
+            {savedSub && (
+              <div style={{ display:"inline-block",marginTop:8,background:"rgba(255,255,255,.2)",borderRadius:50,padding:"4px 14px",fontSize:11,color:"#fff",fontWeight:700 }}>
+                ✅ {savedSub.plan.toUpperCase()} Plan active
+              </div>
+            )}
+          </div>
+
+          {/* STEP: PLANS */}
+          {step === "plans" && (
+            <div style={{ padding:"16px 14px" }}>
+              {/* Plan cards — single column on mobile, 3-col on desktop */}
+              <div style={{ display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(min(100%,220px),1fr))",gap:12,marginBottom:16 }}>
+                {PLANS.map(plan => (
+                  <div key={plan.id} onClick={()=>setSelected(plan)}
+                    style={{
+                      borderRadius:16,padding:16,cursor:"pointer",
+                      border:`2px solid ${selected?.id===plan.id?"#059669":plan.color+"55"}`,
+                      background:selected?.id===plan.id?`${plan.color}11`:"var(--bg3)",
+                      position:"relative",transition:"all .2s",
+                      boxShadow:selected?.id===plan.id?`0 6px 24px ${plan.color}33`:"none",
+                    }}
+                  >
+                    {plan.popular && (
+                      <div style={{ position:"absolute",top:-9,left:"50%",transform:"translateX(-50%)",background:"linear-gradient(135deg,#f59e0b,#ef4444)",color:"#fff",borderRadius:50,padding:"3px 12px",fontSize:10,fontWeight:800,whiteSpace:"nowrap",boxShadow:"0 2px 8px rgba(245,158,11,.4)" }}>⭐ MOST POPULAR</div>
+                    )}
+                    {/* Plan header */}
+                    <div style={{ display:"flex",alignItems:"center",gap:10,marginBottom:12 }}>
+                      <div style={{ fontSize:30 }}>{plan.icon}</div>
+                      <div>
+                        <div style={{ fontWeight:900,fontSize:16,color:plan.color }}>{plan.label}</div>
+                        <div style={{ fontSize:13,fontWeight:800 }}>
+                          {plan.price===0 ? <span style={{ color:"#059669" }}>Free Forever</span> : <><span style={{ color:plan.color }}>₹{plan.price}</span><span style={{ color:"var(--text2)",fontSize:11 }}>/month</span></>}
+                        </div>
+                      </div>
+                      {selected?.id===plan.id && <div style={{ marginLeft:"auto",width:22,height:22,borderRadius:11,background:"#059669",display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",fontWeight:800,fontSize:13,flexShrink:0 }}>✓</div>}
+                    </div>
+                    {/* Features */}
+                    <div style={{ display:"flex",flexDirection:"column",gap:5 }}>
+                      {plan.features.map(f=>(
+                        <div key={f} style={{ display:"flex",gap:7,alignItems:"flex-start",fontSize:12 }}>
+                          <span style={{ color:"#059669",fontWeight:800,flexShrink:0,marginTop:1 }}>✓</span>
+                          <span style={{ color:"var(--text)",lineHeight:1.4 }}>{f}</span>
+                        </div>
+                      ))}
+                      {plan.locked.slice(0,3).map(f=>(
+                        <div key={f} style={{ display:"flex",gap:7,alignItems:"flex-start",fontSize:11,opacity:.4 }}>
+                          <span style={{ color:"#94a3b8",flexShrink:0 }}>✕</span>
+                          <span style={{ color:"var(--text2)",textDecoration:"line-through",lineHeight:1.4 }}>{f}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              {/* CTA */}
+              {selected ? (
+                <div style={{ textAlign:"center",padding:"0 4px" }}>
+                  {selected.price === 0
+                    ? <button style={{ ...btn(),padding:"13px",width:"100%",justifyContent:"center",fontSize:15 }} className="hbtn"
+                        onClick={()=>{ lsSet("trp_subscription",{plan:"basic",name:"Guest",phone:"",price:0,startDate:new Date().toLocaleDateString("en-IN"),status:"active"}); setStep("success"); }}>
+                        ✅ Activate Free Plan
+                      </button>
+                    : <button style={{ ...btn(),padding:"13px",width:"100%",justifyContent:"center",fontSize:15,background:`linear-gradient(135deg,${selected.color},#059669)` }} className="hbtn"
+                        onClick={()=>setStep("checkout")}>
+                        💳 Subscribe to {selected.label} — ₹{selected.price}/mo →
+                      </button>
+                  }
+                  <p style={{ fontSize:11,color:"var(--text2)",marginTop:8 }}>Cancel anytime · No hidden charges</p>
+                </div>
+              ) : (
+                <p style={{ textAlign:"center",fontSize:13,color:"var(--text2)",padding:"8px 0" }}>👆 Tap a plan to select it</p>
+              )}
+            </div>
+          )}
+
+          {/* STEP: CHECKOUT */}
+          {step === "checkout" && selected && (
+            <div style={{ padding:"16px 14px" }}>
+              <button onClick={()=>setStep("plans")} style={{ ...btn("ghost"),fontSize:12,marginBottom:14,border:"1px solid var(--bdr)" }}>← Back</button>
+
+              {/* Plan summary pill */}
+              <div style={{ background:`linear-gradient(135deg,${selected.color}22,${selected.color}11)`,border:`1.5px solid ${selected.color}44`,borderRadius:14,padding:"12px 14px",marginBottom:16,display:"flex",alignItems:"center",gap:10 }}>
+                <div style={{ fontSize:28 }}>{selected.icon}</div>
+                <div><div style={{ fontWeight:900,fontSize:15 }}>{selected.label} Plan</div><div style={{ fontSize:12,color:selected.color,fontWeight:700 }}>₹{selected.price}/month</div></div>
+                <div style={{ marginLeft:"auto",textAlign:"right" }}>
+                  <div style={{ fontWeight:900,fontSize:20,color:selected.color }}>₹{selected.price}</div>
+                  <div style={{ fontSize:10,color:"var(--text2)" }}>per month</div>
+                </div>
+              </div>
+
+              {/* User details */}
+              <div style={{ display:"flex",flexDirection:"column",gap:11,marginBottom:16 }}>
+                <div><label style={{ fontWeight:700,fontSize:11,marginBottom:5,display:"block",color:"var(--text2)" }}>YOUR NAME *</label><input style={inp} placeholder="Full name" value={payForm.name} onChange={e=>setPayForm(p=>({...p,name:e.target.value}))}/></div>
+                <div><label style={{ fontWeight:700,fontSize:11,marginBottom:5,display:"block",color:"var(--text2)" }}>PHONE *</label><input style={inp} type="tel" placeholder="10-digit number" value={payForm.phone} onChange={e=>setPayForm(p=>({...p,phone:e.target.value}))}/></div>
+              </div>
+
+              {/* Payment */}
+              <div style={{ fontWeight:700,fontSize:11,marginBottom:10,color:"var(--text2)",letterSpacing:.5 }}>PAYMENT METHOD</div>
+              <div style={{ background:"var(--bg3)",borderRadius:14,padding:"14px 14px",marginBottom:12 }}>
+                <div style={{ fontWeight:800,fontSize:13,marginBottom:10 }}>📱 UPI / QR Code</div>
+                <div style={{ display:"flex",gap:12,alignItems:"center",marginBottom:10 }}>
+                  <div style={{ width:80,height:80,background:"repeating-conic-gradient(#000 0% 25%,#fff 0% 50%) 0 0 / 6px 6px",borderRadius:8,flexShrink:0 }}/>
+                  <div style={{ fontSize:12,lineHeight:1.7 }}>
+                    <div style={{ fontWeight:700 }}>Scan & Pay ₹{selected.price}</div>
+                    <div style={{ color:"var(--text2)" }}>UPI: <b style={{ color:"var(--text)" }}>trpharmacy@paytm</b></div>
+                    <div style={{ color:"var(--text2)" }}>GPay/PhonePe: <b style={{ color:"var(--text)" }}>{(contact?.phone1||'6389482072')}</b></div>
+                  </div>
+                </div>
+                <label style={{ fontWeight:700,fontSize:11,marginBottom:5,display:"block",color:"var(--text2)" }}>TRANSACTION ID (after payment)</label>
+                <input style={inp} placeholder="Paste UPI transaction ID" value={payForm.upi} onChange={e=>setPayForm(p=>({...p,upi:e.target.value}))}/>
+              </div>
+
+              <a href={`https://wa.me/91${contact?.phone1||'6389482072'}?text=Hi%20TR%20Pharmacy%2C%20I%20want%20to%20subscribe%20${selected.label}%20plan%20%E2%82%B9${selected.price}%2Fmonth`}
+                target="_blank" rel="noreferrer"
+                style={{ display:"flex",alignItems:"center",gap:10,padding:"13px 14px",background:"#dcfce7",borderRadius:14,textDecoration:"none",marginBottom:16,border:"1.5px solid #bbf7d0" }}>
+                <div style={{ width:36,height:36,borderRadius:10,background:"#25d366",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0 }}><WAIcon/></div>
+                <div><div style={{ fontWeight:900,color:"#166534",fontSize:13 }}>Pay via WhatsApp</div><div style={{ fontSize:11,color:"#15803d" }}>Message us & we'll guide you</div></div>
+                <span style={{ marginLeft:"auto",color:"#15803d",fontSize:18 }}>→</span>
+              </a>
+
+              <button style={{ ...btn(),padding:"14px",fontSize:14,justifyContent:"center",width:"100%",background:`linear-gradient(135deg,${selected.color},#059669)` }} className="hbtn" onClick={handleSubscribe}>
+                ✅ Confirm — ₹{selected.price}/month
+              </button>
+              <p style={{ textAlign:"center",fontSize:11,color:"var(--text2)",marginTop:8 }}>We'll activate within 2 hours via WhatsApp</p>
+            </div>
+          )}
+
+          {/* STEP: SUCCESS */}
+          {step === "success" && (
+            <div style={{ padding:"32px 18px",textAlign:"center" }}>
+              <div style={{ fontSize:60,marginBottom:12,animation:"popIn .6s cubic-bezier(.22,1,.36,1) both" }}>🎉</div>
+              <h2 style={{ fontWeight:900,fontSize:"clamp(18px,5vw,24px)",marginBottom:8 }}>
+                {selected?.price===0?"Free Plan Activated!":selected?.label+" Plan Subscribed!"}
+              </h2>
+              <p style={{ color:"var(--text2)",fontSize:13,marginBottom:16,lineHeight:1.6,maxWidth:340,margin:"0 auto 16px" }}>
+                {selected?.price===0?"You now have access to all basic features.":
+                  `Your ${selected?.label} plan is being activated. We'll confirm via WhatsApp within 2 hours.`}
+              </p>
+              {selected?.price>0 && (
+                <div style={{ background:"var(--bg3)",borderRadius:14,padding:14,marginBottom:16,textAlign:"left" }}>
+                  {[["📦 Plan",selected?.label],["💰 Amount","₹"+selected?.price+"/month"],["📱 Phone",payForm.phone],["📅 Start",new Date().toLocaleDateString("en-IN")]].map(([k,v])=>(
+                    <div key={k} style={{ display:"flex",justifyContent:"space-between",fontSize:13,padding:"5px 0",borderBottom:"1px solid var(--bdr)" }}>
+                      <span style={{ color:"var(--text2)" }}>{k}</span><b>{v}</b>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <div style={{ display:"flex",gap:10,justifyContent:"center",flexWrap:"wrap" }}>
+                <button style={{ ...btn(),flex:1,minWidth:140,justifyContent:"center",padding:"12px" }} onClick={onClose}>Continue Shopping</button>
+                <a href={`https://wa.me/91${contact?.phone1||'6389482072'}?text=Hi!%20I%20subscribed%20to%20${selected?.label}%20plan`} target="_blank" rel="noreferrer"
+                  style={{ ...btn("wa"),flex:1,minWidth:140,textDecoration:"none",justifyContent:"center",padding:"12px" }}>💬 WhatsApp</a>
+              </div>
             </div>
           )}
         </div>
-
-        {step === "plans" && (
-          <div style={{ padding:"24px 20px" }}>
-            <div style={{ display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(240px,1fr))",gap:16,marginBottom:20 }}>
-              {PLANS.map(plan => (
-                <div key={plan.id}
-                  onClick={()=>setSelected(plan)}
-                  style={{ borderRadius:18,padding:22,cursor:"pointer",border:`2px solid ${selected?.id===plan.id?"#059669":plan.color}`,background:plan.bg,position:"relative",transition:"all .22s",transform:selected?.id===plan.id?"scale(1.02)":"scale(1)",boxShadow:selected?.id===plan.id?"0 8px 32px rgba(5,150,105,.2)":"0 2px 8px rgba(0,0,0,.06)" }}
-                >
-                  {plan.popular && (
-                    <div style={{ position:"absolute",top:-10,left:"50%",transform:"translateX(-50%)",background:"linear-gradient(135deg,#f59e0b,#ef4444)",color:"#fff",borderRadius:50,padding:"3px 14px",fontSize:11,fontWeight:800,whiteSpace:"nowrap",boxShadow:"0 3px 10px rgba(245,158,11,.4)" }}>
-                      ⭐ MOST POPULAR
-                    </div>
-                  )}
-                  <div style={{ textAlign:"center",marginBottom:14 }}>
-                    <div style={{ fontSize:38,marginBottom:6 }}>{plan.icon}</div>
-                    <div style={{ fontWeight:900,fontSize:18,color:plan.color }}>{plan.label}</div>
-                    <div style={{ marginTop:6 }}>
-                      {plan.price === 0
-                        ? <span style={{ fontSize:26,fontWeight:900,color:"#059669" }}>Free</span>
-                        : <><span style={{ fontSize:28,fontWeight:900,color:plan.color }}>₹{plan.price}</span><span style={{ fontSize:12,color:"#64748b" }}>/month</span></>
-                      }
-                    </div>
-                  </div>
-                  <div style={{ display:"flex",flexDirection:"column",gap:6 }}>
-                    {plan.features.map(f=>(
-                      <div key={f} style={{ display:"flex",gap:8,alignItems:"flex-start",fontSize:12 }}>
-                        <span style={{ color:"#059669",fontWeight:800,flexShrink:0,marginTop:1 }}>✓</span>
-                        <span style={{ color:"var(--text)",lineHeight:1.4 }}>{f}</span>
-                      </div>
-                    ))}
-                    {plan.locked.map(f=>(
-                      <div key={f} style={{ display:"flex",gap:8,alignItems:"flex-start",fontSize:12,opacity:.45 }}>
-                        <span style={{ color:"#94a3b8",flexShrink:0,marginTop:1 }}>✕</span>
-                        <span style={{ color:"var(--text2)",lineHeight:1.4,textDecoration:"line-through" }}>{f}</span>
-                      </div>
-                    ))}
-                  </div>
-                  {selected?.id === plan.id && (
-                    <div style={{ marginTop:14,textAlign:"center" }}>
-                      <div style={{ width:22,height:22,borderRadius:11,background:"#059669",display:"inline-flex",alignItems:"center",justifyContent:"center",color:"#fff",fontWeight:800,fontSize:13 }}>✓</div>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-            {selected && (
-              <div style={{ textAlign:"center" }}>
-                {selected.price === 0
-                  ? <button style={{ ...btn(),padding:"14px 40px",fontSize:15 }} className="hbtn" onClick={()=>{ lsSet("trp_subscription",{plan:"basic",name:"Guest",phone:"",price:0,startDate:new Date().toLocaleDateString("en-IN"),status:"active"}); setStep("success"); }}>
-                      ✅ Activate Free Plan
-                    </button>
-                  : <button style={{ ...btn(),padding:"14px 40px",fontSize:15,background:`linear-gradient(135deg,${selected.color},#059669)` }} className="hbtn" onClick={()=>setStep("checkout")}>
-                      💳 Subscribe to {selected.label} — ₹{selected.price}/mo →
-                    </button>
-                }
-                <p style={{ fontSize:11,color:"var(--text2)",marginTop:8 }}>Cancel anytime · No hidden charges</p>
-              </div>
-            )}
-          </div>
-        )}
-
-        {step === "checkout" && selected && (
-          <div style={{ padding:"24px 22px",maxWidth:440,margin:"0 auto" }}>
-            <button onClick={()=>setStep("plans")} style={{ ...btn("ghost"),fontSize:12,marginBottom:18,border:"1px solid var(--bdr)" }}>← Back to Plans</button>
-            <h3 style={{ fontWeight:900,fontSize:17,marginBottom:4 }}>Checkout — {selected.icon} {selected.label} Plan</h3>
-            <p style={{ color:"var(--text2)",fontSize:13,marginBottom:20 }}>₹{selected.price}/month · Cancel anytime</p>
-
-            {/* Order summary */}
-            <div style={{ background:"var(--bg3)",borderRadius:14,padding:16,marginBottom:20 }}>
-              <div style={{ display:"flex",justifyContent:"space-between",fontSize:13,marginBottom:6 }}><span>Plan</span><b>{selected.label}</b></div>
-              <div style={{ display:"flex",justifyContent:"space-between",fontSize:13,marginBottom:6 }}><span>Billing</span><b>Monthly</b></div>
-              <div style={{ borderTop:"1px dashed var(--bdr)",paddingTop:10,marginTop:6,display:"flex",justifyContent:"space-between",fontWeight:900,fontSize:16 }}>
-                <span>Total</span><span style={{ color:selected.color }}>₹{selected.price}/month</span>
-              </div>
-            </div>
-
-            <div style={{ display:"flex",flexDirection:"column",gap:13,marginBottom:18 }}>
-              <div><label style={{ fontWeight:700,fontSize:11,marginBottom:4,display:"block" }}>Your Name *</label><input style={inp} placeholder="Full name" value={payForm.name} onChange={e=>setPayForm(p=>({...p,name:e.target.value}))}/></div>
-              <div><label style={{ fontWeight:700,fontSize:11,marginBottom:4,display:"block" }}>Phone Number *</label><input style={inp} type="tel" placeholder="10-digit number" value={payForm.phone} onChange={e=>setPayForm(p=>({...p,phone:e.target.value}))}/></div>
-            </div>
-
-            {/* Payment options */}
-            <div style={{ marginBottom:18 }}>
-              <div style={{ fontWeight:700,fontSize:12,marginBottom:10,color:"var(--text2)" }}>PAYMENT METHOD</div>
-              {/* UPI / QR */}
-              <div style={{ ...card,marginBottom:10,padding:16,background:"var(--bg3)" }}>
-                <div style={{ fontWeight:800,fontSize:13,marginBottom:10 }}>📱 UPI / QR Code Scan</div>
-                <div style={{ display:"flex",gap:12,alignItems:"center",flexWrap:"wrap" }}>
-                  <div style={{ width:100,height:100,background:"repeating-conic-gradient(#000 0% 25%,#fff 0% 50%) 0 0 / 7px 7px",borderRadius:8,flexShrink:0 }}/>
-                  <div style={{ fontSize:12 }}>
-                    <div style={{ fontWeight:700,marginBottom:4 }}>Scan & Pay ₹{selected.price}</div>
-                    <div style={{ color:"var(--text2)",marginBottom:2 }}>UPI: <b>trpharmacy@paytm</b></div>
-                    <div style={{ color:"var(--text2)",marginBottom:2 }}>GPay: <b>{(contact?.phone1 || '6389482072')}</b></div>
-                    <div style={{ color:"var(--text2)" }}>PhonePe: <b>{(contact?.phone1 || '6389482072')}</b></div>
-                  </div>
-                </div>
-                <div style={{ marginTop:10 }}><label style={{ fontWeight:700,fontSize:11,marginBottom:4,display:"block" }}>UPI Transaction ID (after payment)</label><input style={inp} placeholder="e.g. 4139823748237" value={payForm.upi} onChange={e=>setPayForm(p=>({...p,upi:e.target.value}))}/></div>
-              </div>
-              {/* WhatsApp pay */}
-              <a href={`https://wa.me/91${contact?.phone1 || '6389482072'}?text=Hi%20TR%20Pharmacy%2C%20I%20want%20to%20subscribe%20to%20${selected.label}%20plan%20%E2%82%B9${selected.price}%2Fmonth.%20My%20name%3A%20${payForm.name}%2C%20Phone%3A%20${payForm.phone}`}
-                target="_blank" rel="noreferrer"
-                style={{ ...card,display:"flex",alignItems:"center",gap:11,padding:"14px 16px",background:"#dcfce7",border:"1.5px solid #bbf7d0",textDecoration:"none",borderRadius:14 }} className="lift">
-                <div style={{ width:38,height:38,borderRadius:11,background:"#25d366",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0 }}><WAIcon/></div>
-                <div><div style={{ fontWeight:900,color:"#166534",fontSize:13 }}>Pay via WhatsApp</div><div style={{ fontSize:11,color:"#15803d" }}>Message us & we'll guide payment</div></div>
-                <span style={{ marginLeft:"auto",color:"#15803d" }}>→</span>
-              </a>
-            </div>
-
-            <button style={{ ...btn(),padding:"14px",fontSize:15,justifyContent:"center",width:"100%",background:`linear-gradient(135deg,${selected.color},#059669)` }} className="hbtn" onClick={handleSubscribe}>
-              ✅ Confirm Subscription — ₹{selected.price}/mo
-            </button>
-            <p style={{ textAlign:"center",fontSize:11,color:"var(--text2)",marginTop:8 }}>
-              After payment, we'll activate your plan within 2 hours via WhatsApp.
-            </p>
-          </div>
-        )}
-
-        {step === "success" && (
-          <div style={{ padding:"40px 24px",textAlign:"center" }}>
-            <div style={{ fontSize:68,marginBottom:14,animation:"popIn .6s cubic-bezier(.22,1,.36,1) both" }}>🎉</div>
-            <h2 style={{ fontWeight:900,fontSize:22,marginBottom:8 }}>
-              {selected?.price === 0 ? "Free Plan Activated!" : `${selected?.label} Plan Subscribed!`}
-            </h2>
-            <p style={{ color:"var(--text2)",fontSize:14,marginBottom:20,maxWidth:360,margin:"0 auto 20px" }}>
-              {selected?.price === 0
-                ? "You now have access to all basic features of TR Pharmacy."
-                : `Thank you! Your ${selected?.label} plan is being activated. We'll confirm via WhatsApp (${contact?.phone1 || '6389482072'}) within 2 hours.`
-              }
-            </p>
-            {selected?.price > 0 && (
-              <div style={{ ...card,background:"var(--bg3)",padding:16,marginBottom:20,maxWidth:380,margin:"0 auto 20px",textAlign:"left" }}>
-                <div style={{ fontWeight:800,marginBottom:8,fontSize:13 }}>Your Plan Details:</div>
-                <div style={{ fontSize:12,color:"var(--text2)",display:"flex",flexDirection:"column",gap:4 }}>
-                  <div>📦 Plan: <b style={{ color:"var(--text)" }}>{selected?.label}</b></div>
-                  <div>💰 Amount: <b style={{ color:"#059669" }}>₹{selected?.price}/month</b></div>
-                  <div>📱 Contact: <b style={{ color:"var(--text)" }}>{payForm.phone}</b></div>
-                  <div>📅 Start: <b style={{ color:"var(--text)" }}>{new Date().toLocaleDateString("en-IN")}</b></div>
-                </div>
-              </div>
-            )}
-            <div style={{ display:"flex",gap:10,justifyContent:"center",flexWrap:"wrap" }}>
-              <button style={btn()} onClick={onClose}>Continue Shopping</button>
-              <a href={`https://wa.me/91${contact?.phone1 || '6389482072'}?text=Hi!%20I%20just%20subscribed%20to%20${selected?.label}%20plan`} target="_blank" rel="noreferrer" style={{ ...btn("wa"),textDecoration:"none" }}>💬 WhatsApp Us</a>
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );
@@ -1605,56 +1626,167 @@ const CartPanel = React.memo(function CartPanel({ cart, cartStep, setCartStep, c
 // ─────────────────────────────────────────────────────────────────────────────
 const Nav = React.memo(function Nav({ dark, setDark, page, go, cartCount, onCartOpen, onDBOpen, onAdminOpen, isAdmin, onLogout, onSubOpen }) {
   const [menuOpen, setMenuOpen] = useState(false);
-  const pages = [["home","🏠 Home"],["about","ℹ️ About"],["medicines","💊 Medicines"],["prescription","📋 Rx Upload"],["services","🩺 Services"],["blog","📰 Blog"],["tools","🧮 Tools"],["doctors","👨‍⚕️ Doctors"],["tracking","📦 Track Order"],["loyalty","⭐ Loyalty"],["contact","📞 Contact"],["opening","✅ Opening"]];
+  const pages = [["home","🏠 Home"],["about","ℹ️ About"],["medicines","💊 Medicines"],["prescription","📋 Rx"],["services","🩺 Services"],["blog","📰 Blog"],["tools","🧮 Tools"],["doctors","👨‍⚕️ Doctors"],["tracking","📦 Tracking"],["loyalty","⭐ Loyalty"],["contact","📞 Contact"],["opening","✅ Opening"]];
   const navGo = (p) => { go(p); setMenuOpen(false); };
+
   return (
-    <nav className="nav-sticky" style={{ position:"sticky",top:0,zIndex:200,background:dark?"rgba(15,23,42,.97)":"rgba(255,255,255,.97)",backdropFilter:"blur(16px)",WebkitBackdropFilter:"blur(16px)",borderBottom:"1px solid var(--bdr)",boxShadow:"0 2px 20px rgba(0,0,0,.07)",transition:"background .3s,box-shadow .3s",width:"100%",maxWidth:"100vw" }}>
-      <div style={{ maxWidth:1200,margin:"0 auto",padding:"0 16px",display:"flex",alignItems:"center",justifyContent:"space-between",height:56,width:"100%",boxSizing:"border-box" }}>
-        <div onClick={()=>navGo("home")} style={{ display:"flex",alignItems:"center",gap:9,cursor:"pointer",flexShrink:0 }}>
-          <div style={{ width:32,height:32,borderRadius:9,background:"linear-gradient(135deg,#059669,#0ea5e9)",display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",fontWeight:900,fontSize:16,flexShrink:0,transition:"transform .2s" }}
-            onMouseEnter={e=>{e.currentTarget.style.transform="rotate(15deg) scale(1.1)";}} onMouseLeave={e=>{e.currentTarget.style.transform="none";}}>✚</div>
-          <div>
-            <div style={{ fontSize:14,fontWeight:900,color:"#059669",letterSpacing:"-.4px",lineHeight:1 }}>TR Pharmacy</div>
-            <div style={{ fontSize:9,color:"var(--text2)",marginTop:1 }}>Your Trusted Health Partner</div>
+    <nav style={{
+      position:"sticky",top:0,zIndex:200,
+      background:dark?"rgba(15,23,42,.98)":"rgba(255,255,255,.98)",
+      backdropFilter:"blur(20px)",WebkitBackdropFilter:"blur(20px)",
+      borderBottom:"1px solid var(--bdr)",
+      boxShadow:"0 1px 16px rgba(0,0,0,.08)",
+      transition:"background .3s",
+      width:"100%",maxWidth:"100vw",
+    }}>
+      {/* Main bar */}
+      <div style={{
+        maxWidth:1200,margin:"0 auto",
+        padding:"0 12px",
+        display:"flex",alignItems:"center",
+        justifyContent:"space-between",
+        height:54,
+        width:"100%",boxSizing:"border-box",
+        gap:8,
+      }}>
+        {/* Logo */}
+        <div onClick={()=>navGo("home")} style={{ display:"flex",alignItems:"center",gap:8,cursor:"pointer",flexShrink:0,minWidth:0 }}>
+          <div style={{
+            width:34,height:34,borderRadius:10,flexShrink:0,
+            background:"linear-gradient(135deg,#059669,#0ea5e9)",
+            display:"flex",alignItems:"center",justifyContent:"center",
+            color:"#fff",fontWeight:900,fontSize:17,
+            boxShadow:"0 2px 8px rgba(5,150,105,.35)",
+          }}>✚</div>
+          <div style={{ lineHeight:1,minWidth:0 }}>
+            <div style={{ fontSize:15,fontWeight:900,color:"#059669",letterSpacing:"-.3px",whiteSpace:"nowrap" }}>TR Pharmacy</div>
+            <div style={{ fontSize:9.5,color:"var(--text2)",marginTop:1,whiteSpace:"nowrap" }}>Your Trusted Health Partner</div>
           </div>
         </div>
-        <div style={{ display:"flex",gap:1,alignItems:"center" }} className="desk-nav">
+
+        {/* Desktop links */}
+        <div className="desk-nav" style={{ display:"flex",gap:2,alignItems:"center",flex:1,justifyContent:"center",overflow:"hidden" }}>
           {pages.map(([p,l])=>(
-            <button key={p} onClick={()=>navGo(p)} className="nav-link" style={{ padding:"5px 10px",borderRadius:7,border:"none",cursor:"pointer",fontWeight:700,fontSize:11,background:page===p?"#059669":"transparent",color:page===p?"#fff":"var(--text2)",whiteSpace:"nowrap",transition:"all .18s" }}>{l}</button>
+            <button key={p} onClick={()=>navGo(p)}
+              style={{
+                padding:"5px 8px",borderRadius:7,border:"none",cursor:"pointer",
+                fontWeight:700,fontSize:10.5,
+                background:page===p?"#059669":"transparent",
+                color:page===p?"#fff":"var(--text2)",
+                whiteSpace:"nowrap",transition:"all .18s",flexShrink:0,
+              }}>{l}</button>
           ))}
         </div>
+
+        {/* Right action buttons */}
         <div style={{ display:"flex",gap:5,alignItems:"center",flexShrink:0 }}>
-          <button onClick={()=>setDark(d=>!d)} style={{ width:32,height:32,borderRadius:7,border:"1px solid var(--bdr)",background:"var(--bg2)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:"var(--text2)" }}>{dark?<SunIcon/>:<MoonIcon/>}</button>
-          <button onClick={onCartOpen} style={{ position:"relative",width:32,height:32,borderRadius:7,border:"1px solid var(--bdr)",background:"var(--bg2)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:"var(--text2)" }}>
-            <CartIcon/>{cartCount>0&&<span style={{ position:"absolute",top:-5,right:-5,width:16,height:16,borderRadius:8,background:"#ef4444",color:"#fff",fontSize:9,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center" }}>{cartCount}</span>}
+          {/* Dark mode */}
+          <button onClick={()=>setDark(d=>!d)}
+            style={{ width:34,height:34,borderRadius:8,border:"1px solid var(--bdr)",background:"var(--bg2)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:"var(--text2)",flexShrink:0 }}>
+            {dark?<SunIcon/>:<MoonIcon/>}
           </button>
-          {isAdmin && <button onClick={onDBOpen} title="Submissions" style={{ width:32,height:32,borderRadius:7,border:"1px solid var(--bdr)",background:"var(--bg2)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14 }} className="hbtn">📬</button>}
-          <button onClick={onSubOpen} title="Membership Plans" style={{ height:32,padding:"0 11px",borderRadius:7,border:"1px solid rgba(245,158,11,.5)",background:"linear-gradient(135deg,#fef3c7,#fffbeb)",cursor:"pointer",display:"flex",alignItems:"center",gap:4,color:"#d97706",fontSize:12,fontWeight:800 }} className="hbtn">💎<span className="hide-mobile" style={{ fontSize:11 }}>Plans</span></button>
+          {/* Cart */}
+          <button onClick={onCartOpen}
+            style={{ position:"relative",width:34,height:34,borderRadius:8,border:"1px solid var(--bdr)",background:"var(--bg2)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:"var(--text2)",flexShrink:0 }}>
+            <CartIcon/>
+            {cartCount>0&&<span style={{ position:"absolute",top:-4,right:-4,width:16,height:16,borderRadius:8,background:"#ef4444",color:"#fff",fontSize:9,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",lineHeight:1 }}>{cartCount}</span>}
+          </button>
+          {/* 💎 Plans — desktop only */}
+          <button onClick={onSubOpen}
+            className="hbtn hide-mobile"
+            style={{ height:34,padding:"0 10px",borderRadius:8,border:"1px solid rgba(245,158,11,.45)",background:"#fef9ec",cursor:"pointer",display:"flex",alignItems:"center",gap:4,color:"#d97706",fontSize:12,fontWeight:800,flexShrink:0 }}>
+            💎 Plans
+          </button>
+          {/* Admin / Login */}
           {isAdmin ? (
-            <div style={{ display:"flex",gap:5,alignItems:"center" }}>
-              <button onClick={onAdminOpen} title="Admin Panel" style={{ height:32,padding:"0 12px",borderRadius:7,border:"1px solid rgba(99,102,241,.4)",background:"linear-gradient(135deg,#4f46e5,#059669)",cursor:"pointer",display:"flex",alignItems:"center",gap:5,color:"#fff",fontSize:12,fontWeight:700 }} className="hbtn admin-badge"><AdminIcon/><span className="hide-mobile">Admin</span></button>
-              <button onClick={onLogout} title="Logout" style={{ height:32,padding:"0 10px",borderRadius:7,border:"1px solid #fca5a5",background:"#fee2e2",cursor:"pointer",display:"flex",alignItems:"center",gap:4,color:"#dc2626",fontSize:12,fontWeight:700 }} className="hbtn">⏻</button>
-            </div>
+            <>
+              <button onClick={onAdminOpen}
+                className="hbtn hide-mobile admin-badge"
+                style={{ height:34,padding:"0 10px",borderRadius:8,border:"1px solid rgba(99,102,241,.35)",background:"linear-gradient(135deg,#4f46e5,#059669)",cursor:"pointer",display:"flex",alignItems:"center",gap:5,color:"#fff",fontSize:12,fontWeight:700,flexShrink:0 }}>
+                <AdminIcon/> <span>Admin</span>
+              </button>
+              <button onClick={onLogout}
+                className="hbtn hide-mobile"
+                style={{ height:34,padding:"0 10px",borderRadius:8,border:"1px solid #fca5a5",background:"#fee2e2",cursor:"pointer",color:"#dc2626",fontSize:12,fontWeight:700,flexShrink:0,display:"flex",alignItems:"center" }}>⏻</button>
+            </>
           ) : (
-            <button onClick={onAdminOpen} title="Admin Login" style={{ width:32,height:32,borderRadius:7,border:"1px solid var(--bdr)",background:"var(--bg2)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:"var(--text2)",fontSize:14 }} className="hbtn">🔐</button>
+            <button onClick={onAdminOpen}
+              className="hide-mobile hbtn"
+              style={{ width:34,height:34,borderRadius:8,border:"1px solid var(--bdr)",background:"var(--bg2)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:"var(--text2)",fontSize:15,flexShrink:0 }}>🔐</button>
           )}
-          <button onClick={()=>setMenuOpen(o=>!o)} style={{ width:34,height:34,borderRadius:8,border:"1px solid var(--bdr)",background:menuOpen?"#059669":"var(--bg2)",cursor:"pointer",display:"none",alignItems:"center",justifyContent:"center",color:menuOpen?"#fff":"var(--text2)",transition:"all .2s" }} className="mob-ham" aria-label="Menu"><HamburgerIcon open={menuOpen}/></button>
+          {/* Hamburger — always visible on mobile */}
+          <button
+            onClick={()=>setMenuOpen(o=>!o)}
+            className="mob-ham"
+            aria-label={menuOpen?"Close menu":"Open menu"}
+            style={{
+              width:38,height:38,borderRadius:9,
+              border:"1.5px solid var(--bdr)",
+              background:menuOpen?"#059669":"var(--bg2)",
+              cursor:"pointer",
+              display:"none",  /* CSS shows it at 768px */
+              alignItems:"center",justifyContent:"center",
+              color:menuOpen?"#fff":"var(--text)",
+              transition:"all .22s",
+              flexShrink:0,
+            }}>
+            <HamburgerIcon open={menuOpen}/>
+          </button>
         </div>
       </div>
-      <div className={`mob-menu${menuOpen?" open":""}`}>
-        {pages.map(([p,l])=>(<button key={p} onClick={()=>navGo(p)} className={`nav-item${page===p?" active":""}`}>{l}</button>))}
-        <button onClick={()=>{onSubOpen();setMenuOpen(false);}} style={{ display:"block",width:"100%",textAlign:"left",padding:"11px 15px",borderRadius:11,marginBottom:3,fontWeight:700,fontSize:13,cursor:"pointer",border:"none",background:"rgba(245,158,11,.1)",color:"#d97706" }}>💎 Membership Plans</button>
-        {isAdmin ? (
-          <div style={{ display:"flex",gap:7,padding:"6px 0 4px" }}>
-            <button onClick={()=>{onAdminOpen();setMenuOpen(false);}} style={{ flex:1,padding:"10px 14px",borderRadius:11,fontWeight:700,fontSize:13,cursor:"pointer",border:"none",background:"rgba(79,70,229,.1)",color:"#4f46e5" }}>⚙️ Admin Panel</button>
-            <button onClick={()=>{onLogout();setMenuOpen(false);}} style={{ padding:"10px 14px",borderRadius:11,fontWeight:700,fontSize:13,cursor:"pointer",border:"none",background:"#fee2e2",color:"#dc2626" }}>⏻ Logout</button>
-          </div>
-        ) : (
-          <button onClick={()=>{onAdminOpen();setMenuOpen(false);}} style={{ display:"block",width:"100%",textAlign:"left",padding:"11px 15px",borderRadius:11,marginBottom:3,fontWeight:700,fontSize:13,cursor:"pointer",border:"none",background:"rgba(0,0,0,.04)",color:"var(--text2)" }}>🔐 Admin Login</button>
-        )}
-        <div className="mob-bottom">
-          <a href="tel:6389482072">📞 Call Now</a>
-          <a href="https://wa.me/916389482072" target="_blank" rel="noreferrer" className="wa">💬 WhatsApp</a>
+
+      {/* Mobile dropdown */}
+      <div className={`mob-menu${menuOpen?" open":""}`} style={{ maxHeight:menuOpen?"calc(100vh - 54px)":"0",overflowY:menuOpen?"auto":"hidden" }}>
+        {/* Nav links grid */}
+        <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:4,marginBottom:10 }}>
+          {pages.map(([p,l])=>(
+            <button key={p} onClick={()=>navGo(p)}
+              className={`nav-item${page===p?" active":""}`}
+              style={{ textAlign:"center",padding:"10px 8px",borderRadius:10,fontSize:12 }}>
+              {l}
+            </button>
+          ))}
+        </div>
+
+        {/* Special actions */}
+        <div style={{ display:"flex",flexDirection:"column",gap:6,marginBottom:10 }}>
+          <button onClick={()=>{onSubOpen();setMenuOpen(false);}}
+            style={{ width:"100%",padding:"11px 15px",borderRadius:11,fontWeight:700,fontSize:13,cursor:"pointer",border:"none",background:"linear-gradient(135deg,#fef3c7,#fde68a)",color:"#92400e",textAlign:"left",display:"flex",alignItems:"center",gap:8 }}>
+            💎 Membership Plans
+          </button>
+          {isAdmin ? (
+            <div style={{ display:"grid",gridTemplateColumns:"1fr auto",gap:6 }}>
+              <button onClick={()=>{onAdminOpen();setMenuOpen(false);}}
+                style={{ padding:"11px 15px",borderRadius:11,fontWeight:700,fontSize:13,cursor:"pointer",border:"none",background:"rgba(79,70,229,.1)",color:"#4f46e5",textAlign:"left" }}>
+                ⚙️ Admin Panel
+              </button>
+              <button onClick={()=>{onLogout();setMenuOpen(false);}}
+                style={{ padding:"11px 15px",borderRadius:11,fontWeight:700,fontSize:13,cursor:"pointer",border:"none",background:"#fee2e2",color:"#dc2626" }}>⏻</button>
+            </div>
+          ) : (
+            <button onClick={()=>{onAdminOpen();setMenuOpen(false);}}
+              style={{ width:"100%",padding:"11px 15px",borderRadius:11,fontWeight:700,fontSize:13,cursor:"pointer",border:"1px solid var(--bdr)",background:"var(--bg3)",color:"var(--text2)",textAlign:"left" }}>
+              🔐 Admin Login
+            </button>
+          )}
+          {isAdmin && (
+            <button onClick={()=>{onDBOpen();setMenuOpen(false);}}
+              style={{ width:"100%",padding:"11px 15px",borderRadius:11,fontWeight:700,fontSize:13,cursor:"pointer",border:"1px solid var(--bdr)",background:"var(--bg3)",color:"var(--text)",textAlign:"left" }}>
+              📬 View Submissions
+            </button>
+          )}
+        </div>
+
+        {/* Call / WhatsApp */}
+        <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,paddingTop:10,borderTop:"1px solid var(--bdr)" }}>
+          <a href="tel:6389482072"
+            style={{ display:"flex",alignItems:"center",justifyContent:"center",gap:6,padding:"11px 8px",borderRadius:11,background:"linear-gradient(135deg,#059669,#047857)",color:"#fff",fontWeight:700,fontSize:13,textDecoration:"none" }}>
+            📞 Call Now
+          </a>
+          <a href="https://wa.me/916389482072" target="_blank" rel="noreferrer"
+            style={{ display:"flex",alignItems:"center",justifyContent:"center",gap:6,padding:"11px 8px",borderRadius:11,background:"linear-gradient(135deg,#25d366,#128c5e)",color:"#fff",fontWeight:700,fontSize:13,textDecoration:"none" }}>
+            💬 WhatsApp
+          </a>
         </div>
       </div>
     </nav>
@@ -1677,7 +1809,7 @@ const HomePage = React.memo(function HomePage({ go, meds, services, testimonials
   return (
     <div className="pg">
       {/* Hero */}
-      <section style={{ background:"linear-gradient(135deg,#064e3b 0%,#065f46 45%,#0c4a6e 100%)",padding:"clamp(44px,8vw,70px) 20px clamp(36px,6vw,58px)",position:"relative",overflow:"hidden" }}>
+      <section style={{ background:"linear-gradient(135deg,#064e3b 0%,#065f46 45%,#0c4a6e 100%)",padding:"clamp(32px,6vw,70px) clamp(16px,4vw,20px) clamp(28px,5vw,58px)",position:"relative",overflow:"hidden" }}>
         <div style={{ position:"absolute",inset:0,opacity:.05,backgroundImage:"radial-gradient(#fff 1px,transparent 1px),radial-gradient(rgba(14,165,233,.3) 2px,transparent 2px)",backgroundSize:"48px 48px,96px 96px",backgroundPosition:"0 0,24px 24px" }}/>
         <div style={{ maxWidth:1200,margin:"0 auto",position:"relative" }} className="hg">
           <div>
@@ -2382,10 +2514,16 @@ const PlanHoverCard = React.memo(function PlanHoverCard({ plan, onSubOpen }) {
   const [show, setShow] = React.useState(false);
   const btn = mkBtn;
   const card = mkCard();
+  const ref = React.useRef(null);
+  React.useEffect(() => {
+    const handleOut = (e) => { if (ref.current && !ref.current.contains(e.target)) setShow(false); };
+    document.addEventListener("touchstart", handleOut, true);
+    return () => document.removeEventListener("touchstart", handleOut, true);
+  }, []);
   return (
-    <div style={{ position:"relative",flex:1,minWidth:100 }}
+    <div ref={ref} style={{ position:"relative",flex:1,minWidth:100 }}
       onMouseEnter={()=>setShow(true)} onMouseLeave={()=>setShow(false)}
-      onTouchStart={()=>setShow(s=>!s)}>
+      onTouchStart={(e)=>{e.stopPropagation();setShow(s=>!s);}}>
       <div style={{ background:"rgba(255,255,255,.13)",borderRadius:14,padding:"14px 16px",textAlign:"center",cursor:"pointer",transition:"transform .2s,background .2s",transform:show?"scale(1.05)":"scale(1)",background:show?"rgba(255,255,255,.22)":"rgba(255,255,255,.13)" }}>
         <div style={{ fontSize:24,marginBottom:5 }}>{plan.icon}</div>
         <div style={{ color:"#fff",fontWeight:900,fontSize:15 }}>{plan.price===0?"Free":"₹"+plan.price+"/mo"}</div>
