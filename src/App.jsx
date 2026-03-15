@@ -4,11 +4,21 @@ import React, { useState, useEffect, useRef, useCallback, useMemo } from "react"
 //  localStorage helpers
 // ─────────────────────────────────────────────────────────────────────────────
 function lsGet(key, fallback) {
-  try { const v = localStorage.getItem(key); return v !== null ? JSON.parse(v) : fallback; }
-  catch { return fallback; }
+  try {
+    const v = localStorage.getItem(key);
+    if (v === null || v === "null" || v === "undefined") return fallback;
+    const parsed = JSON.parse(v);
+    return (parsed === null || parsed === undefined) ? fallback : parsed;
+  } catch { return fallback; }
 }
 function lsSet(key, val) {
-  try { localStorage.setItem(key, JSON.stringify(val)); } catch {}
+  try {
+    if (val === null || val === undefined) {
+      localStorage.removeItem(key);
+    } else {
+      localStorage.setItem(key, JSON.stringify(val));
+    }
+  } catch {}
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -83,6 +93,19 @@ const DEFAULT_CONTACT = {
 };
 const DEFAULT_CATS = ["All","Tablets","Capsules","Syrups","Supplements","Personal Care","Devices"];
 const MAPS_URL = "https://www.google.com/maps/search/Janki+Plaza+Sector+G+Jankipuram+Lucknow";
+
+const DEFAULT_BLOGS = [
+  { id:1, title:"5 Tips to Stay Healthy This Summer", category:"Health Tips", date:"12 Mar 2026", author:"TR Pharmacy", summary:"Beat the heat with simple tips — stay hydrated, eat light, and protect your skin.", content:"Summers in Lucknow can be harsh. Here are 5 proven tips:\n\n1. Drink 8-10 glasses of water daily\n2. Avoid direct sunlight 11AM-4PM\n3. Eat cooling foods: cucumber, coconut water\n4. Keep ORS sachets handy\n5. Visit TR Pharmacy for summer health essentials.", img:null, emoji:"☀️", tag:"Tips" },
+  { id:2, title:"Understanding Blood Pressure Medicines", category:"Medicine Guide", date:"10 Mar 2026", author:"TR Pharmacy", summary:"A simple guide to BP medicines, when to take them and what precautions to follow.", content:"BP medicines need to be taken regularly:\n\n• Always take at the same time daily\n• Never skip doses\n• Monitor BP weekly\n• Avoid excess salt and stress\n\nVisit TR Pharmacy for free BP monitoring.", img:null, emoji:"🩺", tag:"Guide" },
+  { id:3, title:"Diabetes Care: Managing Blood Sugar Daily", category:"Disease Management", date:"8 Mar 2026", author:"TR Pharmacy", summary:"Simple daily habits that help diabetes patients maintain healthy blood sugar levels.", content:"Managing diabetes needs daily discipline:\n\n• Check blood sugar every morning\n• Take medicines on time\n• Exercise 30 mins daily\n• Eat small frequent meals\n• Keep glucometer strips stocked\n\nTR Pharmacy stocks all diabetes care products.", img:null, emoji:"🩸", tag:"Diabetes" },
+  { id:4, title:"When to Self-Medicate vs See a Doctor", category:"Health Tips", date:"5 Mar 2026", author:"TR Pharmacy", summary:"Know which symptoms you can treat at home and when you must visit a doctor immediately.", content:"SELF-MEDICATE (OTC):\n• Common cold\n• Mild fever below 102°F\n• Headache\n• Minor cuts\n\nSEE A DOCTOR NOW:\n• Chest pain\n• High fever above 103°F\n• Difficulty breathing\n• Severe abdominal pain", img:null, emoji:"💊", tag:"Guide" },
+];
+
+const DEFAULT_DOCTORS = [
+  { id:1, name:"Dr. Rajesh Kumar", specialty:"General Physician", qual:"MBBS, MD", exp:"15 years", phone:"9876543210", timing:"Mon-Sat: 10AM-2PM, 5PM-8PM", fee:300, location:"Near Janki Plaza, Jankipuram", available:true, img:null },
+  { id:2, name:"Dr. Priya Sharma", specialty:"Pediatrician", qual:"MBBS, DCH", exp:"10 years", phone:"9871234567", timing:"Mon-Fri: 9AM-1PM, 4PM-7PM", fee:400, location:"Sector G, Jankipuram", available:true, img:null },
+  { id:3, name:"Dr. Anil Verma", specialty:"Diabetologist", qual:"MBBS, MD Medicine", exp:"20 years", phone:"9812345678", timing:"Tue-Sun: 11AM-3PM", fee:500, location:"Jankipuram Main Road", available:false, img:null },
+];
 const EMOJIS_MED = ["💊","💉","🧴","🍊","🔬","🩺","🧼","☀️","🐟","🌿","🫀","🩹","🏥","🧪","🌡️"];
 const EMOJIS_SVC = ["🩺","🩸","💬","📋","🩹","🚚","🏥","💊","🧬","❤️","🦷","👁️","🧠","🫁","🦴"];
 const DB = { prescriptions:[], contacts:[] };
@@ -118,9 +141,9 @@ const HamburgerIcon = ({open}) => (
 // ─────────────────────────────────────────────────────────────────────────────
 //  STYLE HELPERS
 // ─────────────────────────────────────────────────────────────────────────────
-const mkCard = () => ({ background:"var(--bg2)", borderRadius:18, padding:22, boxShadow:"var(--shd)", border:"1px solid var(--bdr)" });
-const mkInp  = () => ({ width:"100%", padding:"10px 13px", borderRadius:10, border:"1.5px solid var(--bdr)", background:"var(--bg3)", color:"var(--text)", fontSize:13, outline:"none", boxSizing:"border-box", transition:"border-color .2s, box-shadow .2s" });
-const mkBtn  = (v="p") => ({ padding:v==="sm"?"6px 14px":"11px 20px", borderRadius:50, fontWeight:700, fontSize:v==="sm"?12:13, cursor:"pointer", border:v==="out"?"2px solid #059669":"none", background:v==="out"?"transparent":v==="ghost"?"var(--bg3)":v==="red"?"#fee2e2":v==="wa"?"#25d366":"#059669", color:v==="out"?"#059669":v==="ghost"?"var(--text2)":v==="red"?"#dc2626":"#fff", display:"inline-flex", alignItems:"center", gap:5, whiteSpace:"nowrap", transition:"all .18s" });
+const mkCard = () => ({ background:"var(--bg2)", borderRadius:20, padding:"clamp(16px,3vw,24px)", boxShadow:"var(--shd)", border:"1px solid var(--bdr)" });
+const mkInp  = () => ({ width:"100%", padding:"11px 14px", borderRadius:12, border:"1.5px solid var(--bdr)", background:"var(--bg3)", color:"var(--text)", fontSize:13, outline:"none", boxSizing:"border-box", transition:"border-color .22s, box-shadow .22s, transform .15s", WebkitAppearance:"none" });
+const mkBtn  = (v="p") => ({ padding:v==="sm"?"7px 15px":"11px 22px", borderRadius:50, fontWeight:700, fontSize:v==="sm"?12:13, cursor:"pointer", border:v==="out"?"2px solid #059669":"none", background:v==="out"?"transparent":v==="ghost"?"var(--bg3)":v==="red"?"#fee2e2":v==="wa"?"#25d366":"#059669", color:v==="out"?"#059669":v==="ghost"?"var(--text2)":v==="red"?"#dc2626":"#fff", display:"inline-flex", alignItems:"center", gap:6, whiteSpace:"nowrap", transition:"all .2s", letterSpacing:".01em" });
 const mkBdg  = c => ({ display:"inline-block", padding:"3px 12px", borderRadius:50, fontSize:11, fontWeight:700, marginBottom:10, background:c==="g"?"#d1fae5":"#e0f2fe", color:c==="g"?"#059669":"#0ea5e9" });
 const mkTag  = c => ({ display:"inline-block", padding:"2px 9px", borderRadius:50, fontSize:10, fontWeight:700, background:c==="g"?"#d1fae5":c==="b"?"#e0f2fe":"#fef3c7", color:c==="g"?"#059669":c==="b"?"#0ea5e9":"#d97706" });
 const mkHero = (a,b) => ({ background:`linear-gradient(135deg,${a},${b})`, padding:"clamp(40px,6vw,58px) 20px", textAlign:"center" });
@@ -159,102 +182,394 @@ function Counter({ target }) {
   return <span ref={ref}>{n}</span>;
 }
 
+// ── Scroll Reveal hook ──────────────────────────────────────────
+function useReveal() {
+  useEffect(() => {
+    const els = document.querySelectorAll(".reveal,.reveal-left,.reveal-right");
+    if (!els.length) return;
+    const obs = new IntersectionObserver((entries) => {
+      entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add("visible"); obs.unobserve(e.target); } });
+    }, { threshold: 0.1, rootMargin: "0px 0px -40px 0px" });
+    els.forEach(el => obs.observe(el));
+    return () => obs.disconnect();
+  });
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 //  GLOBAL CSS
 // ─────────────────────────────────────────────────────────────────────────────
 const globalCss = `
-  @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap');
-  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
-  body{font-family:'Nunito','Segoe UI',sans-serif;background:var(--bg);overflow-x:hidden;-webkit-tap-highlight-color:transparent;}
-  @keyframes fadeUp   {from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
-  @keyframes fadeIn   {from{opacity:0}to{opacity:1}}
-  @keyframes slideInR {from{opacity:0;transform:translateX(40px)}to{opacity:1;transform:translateX(0)}}
-  @keyframes slideInL {from{opacity:0;transform:translateX(-40px)}to{opacity:1;transform:translateX(0)}}
-  @keyframes slideDown{from{opacity:0;transform:translateY(-12px) scaleY(.95)}to{opacity:1;transform:translateY(0) scaleY(1)}}
-  @keyframes float    {0%,100%{transform:translateY(0)}50%{transform:translateY(-9px)}}
-  @keyframes waPulse  {0%,100%{box-shadow:0 0 0 0 rgba(37,211,102,.5),0 6px 24px rgba(37,211,102,.4)}70%{box-shadow:0 0 0 14px rgba(37,211,102,0),0 6px 24px rgba(37,211,102,.4)}}
-  @keyframes ripple   {from{transform:scale(0);opacity:.4}to{transform:scale(2.5);opacity:0}}
-  @keyframes popIn    {0%{opacity:0;transform:scale(.82) translateY(8px)}70%{transform:scale(1.03)}100%{opacity:1;transform:scale(1) translateY(0)}}
-  @keyframes gradShift{0%,100%{background-position:0% 50%}50%{background-position:100% 50%}}
-  @keyframes dotBlink {0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(.6)}}
-  @keyframes bNavPop  {0%{transform:scale(1)}40%{transform:translateY(-5px) scale(1.22)}100%{transform:translateY(0) scale(1)}}
-  @keyframes cardReveal{from{opacity:0;transform:translateY(24px) scale(.97)}to{opacity:1;transform:translateY(0) scale(1)}}
-  @keyframes adminPulse{0%,100%{box-shadow:0 0 0 0 rgba(99,102,241,.4)}70%{box-shadow:0 0 0 8px rgba(99,102,241,0)}}
+  @import url('https://fonts.googleapis.com/css2?family=Nunito:ital,wght@0,400;0,600;0,700;0,800;0,900;1,400&display=swap');
 
-  .pg{animation:fadeUp .48s cubic-bezier(.22,1,.36,1) both;}
-  .lift{transition:transform .26s cubic-bezier(.22,1,.36,1),box-shadow .26s ease,border-color .2s!important;will-change:transform;}
-  .lift:hover{transform:translateY(-5px) scale(1.01)!important;box-shadow:0 18px 44px rgba(5,150,105,.18)!important;border-color:rgba(5,150,105,.22)!important;}
+  /* ── RESET ── */
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+  html{overflow-x:hidden;width:100%;scroll-behavior:smooth;font-size:16px;}
+  body{
+    font-family:'Nunito','Segoe UI',system-ui,sans-serif;
+    background:var(--bg);color:var(--text);
+    overflow-x:hidden;-webkit-tap-highlight-color:transparent;
+    width:100%;max-width:100vw;
+    line-height:1.6;
+    -webkit-font-smoothing:antialiased;
+  }
+  img{max-width:100%;height:auto;display:block;}
+  a{color:inherit;}
+  button{font-family:inherit;}
+
+  /* ── KEYFRAMES ── */
+  @keyframes fadeUp    {from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}
+  @keyframes fadeDown  {from{opacity:0;transform:translateY(-16px)}to{opacity:1;transform:translateY(0)}}
+  @keyframes fadeIn    {from{opacity:0}to{opacity:1}}
+  @keyframes fadeScale {from{opacity:0;transform:scale(.94)}to{opacity:1;transform:scale(1)}}
+  @keyframes slideInR  {from{opacity:0;transform:translateX(48px)}to{opacity:1;transform:translateX(0)}}
+  @keyframes slideInL  {from{opacity:0;transform:translateX(-48px)}to{opacity:1;transform:translateX(0)}}
+  @keyframes slideDown {from{opacity:0;transform:translateY(-10px) scaleY(.96)}to{opacity:1;transform:translateY(0) scaleY(1)}}
+  @keyframes slideUp   {from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+  @keyframes float     {0%,100%{transform:translateY(0) rotate(0deg)}50%{transform:translateY(-10px) rotate(.4deg)}}
+  @keyframes floatSlow {0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+  @keyframes pulse     {0%,100%{transform:scale(1)}50%{transform:scale(1.05)}}
+  @keyframes waPulse   {0%,100%{box-shadow:0 0 0 0 rgba(37,211,102,.5),0 6px 24px rgba(37,211,102,.35)}70%{box-shadow:0 0 0 16px rgba(37,211,102,0),0 6px 24px rgba(37,211,102,.35)}}
+  @keyframes ripple    {from{transform:scale(0);opacity:.45}to{transform:scale(2.8);opacity:0}}
+  @keyframes popIn     {0%{opacity:0;transform:scale(.78) translateY(10px)}65%{transform:scale(1.04) translateY(-2px)}100%{opacity:1;transform:scale(1) translateY(0)}}
+  @keyframes popInFast {0%{opacity:0;transform:scale(.88)}70%{transform:scale(1.03)}100%{opacity:1;transform:scale(1)}}
+  @keyframes gradShift {0%,100%{background-position:0% 50%}50%{background-position:100% 50%}}
+  @keyframes dotBlink  {0%,100%{opacity:1;transform:scale(1)}50%{opacity:.35;transform:scale(.55)}}
+  @keyframes bNavPop   {0%{transform:scale(1) translateY(0)}40%{transform:scale(1.28) translateY(-7px)}75%{transform:scale(.96) translateY(1px)}100%{transform:scale(1) translateY(0)}}
+  @keyframes cardReveal{from{opacity:0;transform:translateY(28px) scale(.96)}to{opacity:1;transform:translateY(0) scale(1)}}
+  @keyframes shimmer   {0%{background-position:-400px 0}100%{background-position:400px 0}}
+  @keyframes adminPulse{0%,100%{box-shadow:0 0 0 0 rgba(99,102,241,.4)}70%{box-shadow:0 0 0 9px rgba(99,102,241,0)}}
+  @keyframes spin      {to{transform:rotate(360deg)}}
+  @keyframes heroPop   {from{opacity:0;transform:scale(.97) translateY(12px)}to{opacity:1;transform:scale(1) translateY(0)}}
+  @keyframes navIn     {from{opacity:0;transform:translateY(-100%)}to{opacity:1;transform:translateY(0)}}
+  @keyframes toastIn   {from{opacity:0;transform:translateX(100%) scale(.9)}to{opacity:1;transform:translateX(0) scale(1)}}
+  @keyframes progressBar{from{width:0}to{width:100%}}
+  @keyframes scanline  {0%{background-position:0 0}100%{background-position:0 100%}}
+
+  /* ── PAGE ENTER ── */
+  .pg{animation:fadeUp .52s cubic-bezier(.22,1,.36,1) both;}
+  .pg-fast{animation:fadeScale .35s cubic-bezier(.22,1,.36,1) both;}
+
+  /* ── SCROLL REVEAL (applied via IntersectionObserver) ── */
+  .reveal{opacity:0;transform:translateY(22px);transition:opacity .6s cubic-bezier(.22,1,.36,1),transform .6s cubic-bezier(.22,1,.36,1);}
+  .reveal.visible{opacity:1;transform:translateY(0);}
+  .reveal-left{opacity:0;transform:translateX(-28px);transition:opacity .6s cubic-bezier(.22,1,.36,1),transform .6s cubic-bezier(.22,1,.36,1);}
+  .reveal-left.visible{opacity:1;transform:translateX(0);}
+  .reveal-right{opacity:0;transform:translateX(28px);transition:opacity .6s cubic-bezier(.22,1,.36,1),transform .6s cubic-bezier(.22,1,.36,1);}
+  .reveal-right.visible{opacity:1;transform:translateX(0);}
+
+  /* ── CARD HOVER ── */
+  .lift{
+    transition:transform .3s cubic-bezier(.22,1,.36,1),
+               box-shadow .3s cubic-bezier(.22,1,.36,1),
+               border-color .22s ease !important;
+    will-change:transform;
+    backface-visibility:hidden;
+  }
+  .lift:hover{
+    transform:translateY(-6px) scale(1.015)!important;
+    box-shadow:0 20px 50px rgba(5,150,105,.16),0 4px 16px rgba(0,0,0,.06)!important;
+    border-color:rgba(5,150,105,.28)!important;
+  }
   .lift:active{transform:translateY(-1px) scale(.99)!important;}
-  .hbtn{position:relative;overflow:hidden;transition:transform .2s cubic-bezier(.22,1,.36,1),filter .15s,box-shadow .2s!important;}
-  .hbtn:hover{transform:scale(1.04)!important;filter:brightness(1.1);box-shadow:0 7px 22px rgba(5,150,105,.3)!important;}
-  .hbtn:active{transform:scale(.97)!important;}
-  .hbtn .ripple{position:absolute;border-radius:50%;background:rgba(255,255,255,.32);transform:scale(0);animation:ripple .48s linear;pointer-events:none;}
-  .float-anim{animation:float 4s ease-in-out infinite;}
-  input:focus,textarea:focus,select:focus{border-color:#059669!important;box-shadow:0 0 0 3px rgba(5,150,105,.14)!important;outline:none;}
+
+  /* ── BUTTONS ── */
+  .hbtn{
+    position:relative;overflow:hidden;
+    transition:transform .22s cubic-bezier(.22,1,.36,1),
+               filter .18s ease,
+               box-shadow .22s ease !important;
+    backface-visibility:hidden;
+  }
+  .hbtn::before{
+    content:'';position:absolute;inset:0;
+    background:linear-gradient(120deg,transparent 30%,rgba(255,255,255,.18) 50%,transparent 70%);
+    transform:translateX(-100%);
+    transition:transform .5s ease;
+    pointer-events:none;
+  }
+  .hbtn:hover{transform:scale(1.05)!important;filter:brightness(1.09);box-shadow:0 8px 26px rgba(5,150,105,.32)!important;}
+  .hbtn:hover::before{transform:translateX(100%);}
+  .hbtn:active{transform:scale(.96)!important;filter:brightness(.97);}
+  .hbtn .ripple{
+    position:absolute;border-radius:50%;
+    background:rgba(255,255,255,.35);
+    transform:scale(0);animation:ripple .52s linear;
+    pointer-events:none;
+  }
+
+  /* ── FLOAT ── */
+  .float-anim{animation:float 4.5s ease-in-out infinite;}
+  .float-slow{animation:floatSlow 6s ease-in-out infinite;}
+
+  /* ── INPUTS ── */
+  input,textarea,select{
+    transition:border-color .22s ease,box-shadow .22s ease,transform .15s ease !important;
+  }
+  input:focus,textarea:focus,select:focus{
+    border-color:#059669!important;
+    box-shadow:0 0 0 3px rgba(5,150,105,.14),0 2px 8px rgba(5,150,105,.08)!important;
+    outline:none;
+    transform:translateY(-1px);
+  }
+
+  /* ── NAVIGATION ── */
+  .nav-sticky{animation:navIn .4s ease both;}
   .nav-link{position:relative;transition:color .2s,background .2s!important;}
-  .mob-ham{transition:background .2s,transform .15s!important;}
-  .mob-ham:hover{transform:scale(1.08)!important;}
-  .mob-ham:active{transform:scale(.92)!important;}
-  .mob-menu{display:none;flex-direction:column;background:var(--bg2);border-top:1px solid var(--bdr);padding:10px 14px 14px;box-shadow:0 12px 32px rgba(0,0,0,.12);}
-  .mob-menu.open{display:flex;animation:slideDown .26s cubic-bezier(.22,1,.36,1) both;}
-  .mob-menu button.nav-item{display:block;width:100%;text-align:left;padding:11px 15px;border-radius:11px;margin-bottom:3px;font-weight:700;font-size:13px;cursor:pointer;border:none;background:transparent;color:var(--text2);transition:background .16s,color .16s,padding-left .16s;}
-  .mob-menu button.nav-item:hover{background:rgba(5,150,105,.1);color:#059669;padding-left:21px;}
-  .mob-menu button.nav-item.active{background:linear-gradient(135deg,#059669,#0ea5e9);color:#fff;padding-left:19px;box-shadow:0 4px 12px rgba(5,150,105,.28);}
-  .mob-menu.open button.nav-item{animation:slideInL .28s cubic-bezier(.22,1,.36,1) both;}
-  .mob-menu button.nav-item:nth-child(1){animation-delay:.03s}.mob-menu button.nav-item:nth-child(2){animation-delay:.06s}.mob-menu button.nav-item:nth-child(3){animation-delay:.09s}.mob-menu button.nav-item:nth-child(4){animation-delay:.12s}.mob-menu button.nav-item:nth-child(5){animation-delay:.15s}.mob-menu button.nav-item:nth-child(6){animation-delay:.18s}.mob-menu button.nav-item:nth-child(7){animation-delay:.21s}
-  .mob-bottom{display:flex;gap:8px;margin-top:10px;padding-top:12px;border-top:1px solid var(--bdr);}
-  .mob-bottom a{flex:1;text-align:center;padding:10px 8px;border-radius:11px;background:linear-gradient(135deg,#059669,#047857);color:#fff;font-weight:700;font-size:13px;text-decoration:none;transition:transform .16s,box-shadow .16s;box-shadow:0 3px 10px rgba(5,150,105,.22);}
-  .mob-bottom a:hover{transform:translateY(-2px);box-shadow:0 6px 18px rgba(5,150,105,.32);}
-  .mob-bottom a.wa{background:linear-gradient(135deg,#25d366,#128c5e);box-shadow:0 3px 10px rgba(37,211,102,.22);}
-  .bottom-nav{display:none;position:fixed;bottom:0;left:0;right:0;z-index:150;background:var(--bg2);border-top:1px solid var(--bdr);box-shadow:0 -5px 20px rgba(0,0,0,.09);padding:4px 0 env(safe-area-inset-bottom,4px);backdrop-filter:blur(12px);}
+  .nav-link::after{
+    content:'';position:absolute;
+    bottom:-2px;left:50%;right:50%;
+    height:2px;background:#059669;border-radius:2px;
+    transition:left .25s cubic-bezier(.22,1,.36,1),right .25s cubic-bezier(.22,1,.36,1);
+  }
+  .nav-link:hover::after,.nav-link.active::after{left:8%;right:8%;}
+
+  /* ── HAMBURGER ── */
+  .mob-ham{transition:background .2s,transform .18s cubic-bezier(.22,1,.36,1)!important;}
+  .mob-ham:hover{transform:scale(1.1) rotate(5deg)!important;}
+  .mob-ham:active{transform:scale(.9)!important;}
+
+  /* ── MOBILE MENU ── */
+  .mob-menu{
+    display:none;flex-direction:column;
+    background:var(--bg2);
+    border-top:1px solid var(--bdr);
+    padding:10px 14px 16px;
+    box-shadow:0 16px 40px rgba(0,0,0,.12);
+    width:100%;box-sizing:border-box;
+    transform-origin:top;
+  }
+  .mob-menu.open{
+    display:flex;
+    animation:slideDown .3s cubic-bezier(.22,1,.36,1) both;
+  }
+  .mob-menu button.nav-item{
+    display:block;width:100%;text-align:left;
+    padding:11px 15px;border-radius:12px;margin-bottom:3px;
+    font-weight:700;font-size:13px;cursor:pointer;
+    border:none;background:transparent;color:var(--text2);
+    transition:background .18s,color .18s,padding-left .2s,transform .15s;
+    position:relative;overflow:hidden;
+  }
+  .mob-menu button.nav-item:hover{
+    background:rgba(5,150,105,.09);color:#059669;padding-left:22px;
+  }
+  .mob-menu button.nav-item.active{
+    background:linear-gradient(135deg,#059669,#0ea5e9);
+    color:#fff;padding-left:20px;
+    box-shadow:0 4px 14px rgba(5,150,105,.3);
+  }
+  .mob-menu.open button.nav-item{animation:slideInL .3s cubic-bezier(.22,1,.36,1) both;}
+  .mob-menu button.nav-item:nth-child(1){animation-delay:.03s}
+  .mob-menu button.nav-item:nth-child(2){animation-delay:.06s}
+  .mob-menu button.nav-item:nth-child(3){animation-delay:.09s}
+  .mob-menu button.nav-item:nth-child(4){animation-delay:.12s}
+  .mob-menu button.nav-item:nth-child(5){animation-delay:.15s}
+  .mob-menu button.nav-item:nth-child(6){animation-delay:.18s}
+  .mob-menu button.nav-item:nth-child(7){animation-delay:.21s}
+  .mob-menu button.nav-item:nth-child(8){animation-delay:.24s}
+  .mob-menu button.nav-item:nth-child(9){animation-delay:.27s}
+  .mob-menu button.nav-item:nth-child(10){animation-delay:.30s}
+  .mob-menu button.nav-item:nth-child(11){animation-delay:.33s}
+  .mob-menu button.nav-item:nth-child(12){animation-delay:.36s}
+  .mob-bottom{display:flex;gap:8px;margin-top:10px;padding-top:12px;border-top:1px solid var(--bdr);flex-wrap:wrap;}
+  .mob-bottom a{
+    flex:1;min-width:120px;text-align:center;padding:11px 8px;border-radius:12px;
+    background:linear-gradient(135deg,#059669,#047857);
+    color:#fff;font-weight:700;font-size:13px;text-decoration:none;
+    transition:transform .18s,box-shadow .18s;
+    box-shadow:0 3px 12px rgba(5,150,105,.25);
+  }
+  .mob-bottom a:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(5,150,105,.35);}
+  .mob-bottom a.wa{background:linear-gradient(135deg,#25d366,#128c5e);box-shadow:0 3px 12px rgba(37,211,102,.25);}
+
+  /* ── BOTTOM NAV ── */
+  .bottom-nav{
+    display:none;
+    position:fixed;bottom:0;left:0;right:0;z-index:150;
+    background:rgba(var(--bg2-rgb,255,255,255),.92);
+    border-top:1px solid var(--bdr);
+    box-shadow:0 -4px 24px rgba(0,0,0,.09);
+    padding:4px 0 env(safe-area-inset-bottom,6px);
+    backdrop-filter:blur(16px);
+    -webkit-backdrop-filter:blur(16px);
+  }
   .bottom-nav-inner{display:flex;justify-content:space-around;align-items:center;}
-  .bnav-btn{display:flex;flex-direction:column;align-items:center;gap:2px;padding:5px 5px;border-radius:11px;border:none;background:transparent;cursor:pointer;color:var(--text2);font-size:9px;font-weight:700;transition:color .2s;min-width:48px;position:relative;}
-  .bnav-btn .icon{font-size:20px;line-height:1;transition:transform .28s cubic-bezier(.22,1,.36,1);display:block;}
-  .bnav-btn:hover .icon{transform:translateY(-3px) scale(1.1);}
+  .bnav-btn{
+    display:flex;flex-direction:column;align-items:center;
+    gap:2px;padding:5px 6px;border-radius:12px;
+    border:none;background:transparent;cursor:pointer;
+    color:var(--text2);font-size:9.5px;font-weight:700;
+    transition:color .22s ease,background .22s ease;
+    min-width:52px;max-width:64px;position:relative;
+    -webkit-tap-highlight-color:transparent;
+  }
+  .bnav-btn .icon{font-size:21px;line-height:1;transition:transform .3s cubic-bezier(.22,1,.36,1);display:block;}
+  .bnav-btn:hover .icon{transform:translateY(-3px) scale(1.12);}
   .bnav-btn.active{color:#059669;}
-  .bnav-btn.active .icon{animation:bNavPop .38s cubic-bezier(.22,1,.36,1) both;}
-  .bnav-btn.active::before{content:'';position:absolute;top:2px;left:50%;transform:translateX(-50%);width:26px;height:3px;border-radius:3px;background:linear-gradient(90deg,#059669,#0ea5e9);}
-  .card-grid>*{animation:cardReveal .48s cubic-bezier(.22,1,.36,1) both;}
-  .card-grid>*:nth-child(1){animation-delay:.04s}.card-grid>*:nth-child(2){animation-delay:.08s}.card-grid>*:nth-child(3){animation-delay:.12s}.card-grid>*:nth-child(4){animation-delay:.16s}.card-grid>*:nth-child(5){animation-delay:.20s}.card-grid>*:nth-child(6){animation-delay:.24s}.card-grid>*:nth-child(7){animation-delay:.28s}.card-grid>*:nth-child(8){animation-delay:.32s}
-  .med-img-overlay{transition:opacity .2s!important;}
-  .faq-btn{transition:background .16s!important;}
-  .faq-btn:hover{background:rgba(5,150,105,.06)!important;}
-  .faq-body{animation:fadeUp .22s ease both;overflow:hidden;}
-  .toast-pop{animation:popIn .32s cubic-bezier(.22,1,.36,1) both;}
-  .live-dot{animation:dotBlink 1.8s ease-in-out infinite;}
-  .grad-text{background:linear-gradient(270deg,#4ade80,#38bdf8,#a78bfa,#4ade80);background-size:300% 300%;-webkit-background-clip:text;-webkit-text-fill-color:transparent;animation:gradShift 5s ease infinite;}
-  .wa-fab{transition:transform .2s cubic-bezier(.22,1,.36,1),box-shadow .2s!important;animation:waPulse 2.5s cubic-bezier(.22,1,.36,1) infinite!important;}
-  .wa-fab:hover{transform:scale(1.14) rotate(-5deg)!important;box-shadow:0 8px 30px rgba(37,211,102,.6)!important;}
-  /* Admin edit overlay */
-  .edit-overlay{position:absolute;inset:0;background:rgba(99,102,241,.12);border:2px dashed rgba(99,102,241,.4);border-radius:inherit;display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .2s;cursor:pointer;z-index:5;}
+  .bnav-btn.active .icon{animation:bNavPop .42s cubic-bezier(.22,1,.36,1) both;}
+  .bnav-btn.active::before{
+    content:'';position:absolute;top:2px;left:50%;transform:translateX(-50%);
+    width:28px;height:3px;border-radius:3px;
+    background:linear-gradient(90deg,#059669,#0ea5e9);
+    animation:popInFast .3s ease both;
+  }
+
+  /* ── CARD GRID STAGGER ── */
+  .card-grid>*{animation:cardReveal .5s cubic-bezier(.22,1,.36,1) both;}
+  .card-grid>*:nth-child(1){animation-delay:.05s}
+  .card-grid>*:nth-child(2){animation-delay:.10s}
+  .card-grid>*:nth-child(3){animation-delay:.15s}
+  .card-grid>*:nth-child(4){animation-delay:.20s}
+  .card-grid>*:nth-child(5){animation-delay:.25s}
+  .card-grid>*:nth-child(6){animation-delay:.30s}
+  .card-grid>*:nth-child(7){animation-delay:.35s}
+  .card-grid>*:nth-child(8){animation-delay:.40s}
+  .card-grid>*:nth-child(9){animation-delay:.45s}
+  .card-grid>*:nth-child(10){animation-delay:.50s}
+  .card-grid>*:nth-child(11){animation-delay:.55s}
+  .card-grid>*:nth-child(12){animation-delay:.60s}
+
+  /* ── IMAGE OVERLAY ── */
+  .med-img-overlay{transition:opacity .22s ease!important;}
+  .admin-del-btn{display:none!important;}
+  .lift:hover .admin-del-btn{display:flex!important;}
+
+  /* ── FAQ ── */
+  .faq-btn{transition:background .18s ease,color .18s ease!important;}
+  .faq-btn:hover{background:rgba(5,150,105,.05)!important;}
+  .faq-body{animation:fadeDown .24s cubic-bezier(.22,1,.36,1) both;overflow:hidden;}
+
+  /* ── TOAST ── */
+  .toast-pop{animation:toastIn .38s cubic-bezier(.22,1,.36,1) both;}
+
+  /* ── SPECIAL TEXT ── */
+  .live-dot{animation:dotBlink 1.9s ease-in-out infinite;}
+  .grad-text{
+    background:linear-gradient(270deg,#4ade80,#38bdf8,#a78bfa,#34d399,#4ade80);
+    background-size:400% 400%;
+    -webkit-background-clip:text;
+    -webkit-text-fill-color:transparent;
+    background-clip:text;
+    animation:gradShift 6s ease infinite;
+  }
+  .shimmer-text{
+    background:linear-gradient(90deg,var(--text2) 0%,var(--text) 40%,var(--text2) 100%);
+    background-size:400px 100%;
+    -webkit-background-clip:text;
+    -webkit-text-fill-color:transparent;
+    background-clip:text;
+    animation:shimmer 2.5s linear infinite;
+  }
+
+  /* ── WHATSAPP FAB ── */
+  .wa-fab{
+    transition:transform .25s cubic-bezier(.22,1,.36,1),box-shadow .25s ease!important;
+    animation:waPulse 2.8s cubic-bezier(.22,1,.36,1) infinite!important;
+  }
+  .wa-fab:hover{
+    transform:scale(1.16) rotate(-8deg)!important;
+    box-shadow:0 10px 36px rgba(37,211,102,.65),0 0 0 8px rgba(37,211,102,.12)!important;
+    animation:none!important;
+  }
+
+  /* ── ADMIN ── */
+  .edit-overlay{position:absolute;inset:0;background:rgba(99,102,241,.1);border:2px dashed rgba(99,102,241,.4);border-radius:inherit;display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .2s;cursor:pointer;z-index:5;}
   .edit-overlay:hover{opacity:1;}
-  .admin-badge{animation:adminPulse 2s infinite;}
+  .admin-badge{animation:adminPulse 2.2s ease-in-out infinite;}
+
+  /* ── SCROLLBAR ── */
   ::-webkit-scrollbar{width:5px;height:5px;}
   ::-webkit-scrollbar-track{background:transparent;}
-  ::-webkit-scrollbar-thumb{background:rgba(5,150,105,.3);border-radius:3px;}
-  ::-webkit-scrollbar-thumb:hover{background:rgba(5,150,105,.55);}
-  ::selection{background:rgba(5,150,105,.18);}
-  .hg{display:grid;grid-template-columns:1fr 1fr;gap:32px;}
-  .fg{display:grid;grid-template-columns:repeat(4,1fr);gap:32px;}
-  .cg{display:grid;grid-template-columns:1fr 1fr;gap:32px;}
-  .g3{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;}
-  .g4{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;}
-  @media(max-width:1024px){.fg{grid-template-columns:repeat(2,1fr)!important;}.g4{grid-template-columns:repeat(2,1fr)!important;}}
-  @media(max-width:768px){
-    .desk-nav{display:none!important;}.mob-ham{display:flex!important;}
-    .hg{grid-template-columns:1fr!important;gap:22px!important;}.fg{grid-template-columns:1fr 1fr!important;gap:18px!important;}.cg{grid-template-columns:1fr!important;gap:18px!important;}.g3{grid-template-columns:1fr 1fr!important;gap:12px!important;}.g4{grid-template-columns:1fr 1fr!important;gap:12px!important;}
-    .bottom-nav{display:block;}.hide-mobile{display:none!important;}.page-content{padding-bottom:70px;}.wa-fab{bottom:78px!important;}
-    .lift:hover{transform:translateY(-3px) scale(1.005)!important;}
+  ::-webkit-scrollbar-thumb{background:rgba(5,150,105,.28);border-radius:4px;}
+  ::-webkit-scrollbar-thumb:hover{background:rgba(5,150,105,.52);}
+
+  /* ── SELECTION ── */
+  ::selection{background:rgba(5,150,105,.2);color:inherit;}
+
+  /* ══════════════════════════════════════
+     LAYOUT GRIDS
+  ══════════════════════════════════════ */
+  .hg {display:grid;grid-template-columns:1fr 1fr;gap:clamp(16px,3vw,32px);}
+  .fg {display:grid;grid-template-columns:repeat(4,1fr);gap:clamp(14px,2.5vw,32px);}
+  .cg {display:grid;grid-template-columns:1fr 1fr;gap:clamp(16px,3vw,32px);}
+  .g3 {display:grid;grid-template-columns:repeat(3,1fr);gap:clamp(12px,2vw,22px);}
+  .g4 {display:grid;grid-template-columns:repeat(4,1fr);gap:clamp(12px,2vw,20px);}
+
+  /* ══════════════════════════════════════
+     BREAKPOINTS — TABLET 1024
+  ══════════════════════════════════════ */
+  @media(max-width:1024px){
+    .fg{grid-template-columns:repeat(2,1fr)!important;}
+    .g4{grid-template-columns:repeat(2,1fr)!important;}
+    .g3{grid-template-columns:repeat(2,1fr)!important;}
   }
-  @media(max-width:480px){.fg{grid-template-columns:1fr!important;}.g3{grid-template-columns:1fr!important;}.g4{grid-template-columns:1fr 1fr!important;}.hero-btns{flex-direction:column!important;}.hero-btns button,.hero-btns a{width:100%!important;justify-content:center!important;}}
-  @media(max-width:360px){.g4{grid-template-columns:1fr!important;}}
-  @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important;}}
+
+  /* ══════════════════════════════════════
+     BREAKPOINTS — MOBILE 768
+  ══════════════════════════════════════ */
+  @media(max-width:768px){
+    html{font-size:15px;}
+    .desk-nav{display:none!important;}
+    .mob-ham{display:flex!important;}
+    .hg{grid-template-columns:1fr!important;gap:clamp(14px,4vw,22px)!important;}
+    .fg{grid-template-columns:1fr 1fr!important;gap:clamp(12px,3vw,18px)!important;}
+    .cg{grid-template-columns:1fr!important;gap:clamp(14px,4vw,20px)!important;}
+    .g3{grid-template-columns:1fr!important;gap:clamp(12px,3vw,16px)!important;}
+    .g4{grid-template-columns:1fr 1fr!important;gap:clamp(10px,3vw,14px)!important;}
+    .bottom-nav{display:block;}
+    .hide-mobile{display:none!important;}
+    .page-content{padding-bottom:72px;}
+    .wa-fab{bottom:80px!important;}
+    .lift:hover{transform:translateY(-3px) scale(1.008)!important;}
+    .hbtn:hover{transform:scale(1.02)!important;}
+    /* Larger touch targets */
+    button,a{min-height:36px;}
+  }
+
+  /* ══════════════════════════════════════
+     BREAKPOINTS — SMALL 480
+  ══════════════════════════════════════ */
+  @media(max-width:480px){
+    html{font-size:14px;}
+    .fg{grid-template-columns:1fr!important;}
+    .g3{grid-template-columns:1fr!important;}
+    .g4{grid-template-columns:1fr 1fr!important;}
+    .hero-btns{flex-direction:column!important;}
+    .hero-btns button,.hero-btns a{width:100%!important;justify-content:center!important;}
+    /* Prevent any horizontal overflow */
+    section,div{max-width:100%;}
+    /* Better modal sizing */
+    [style*="min(820px"],[style*="min(680px"],[style*="min(860px"]{width:calc(100vw - 24px)!important;}
+  }
+
+  /* ══════════════════════════════════════
+     BREAKPOINTS — XS 380
+  ══════════════════════════════════════ */
+  @media(max-width:380px){
+    html{font-size:13.5px;}
+    .g4{grid-template-columns:1fr!important;}
+    .bnav-btn{min-width:44px;font-size:9px;}
+    .bnav-btn .icon{font-size:19px;}
+  }
+
+  /* ── ACCESSIBILITY ── */
+  @media(prefers-reduced-motion:reduce){
+    *,*::before,*::after{
+      animation-duration:.01ms!important;
+      animation-iteration-count:1!important;
+      transition-duration:.01ms!important;
+    }
+    .pg,.card-grid>*,.reveal,.reveal-left,.reveal-right{
+      animation:none!important;opacity:1!important;transform:none!important;
+    }
+  }
+
+  /* ── PRINT ── */
+  @media print{
+    .nav-sticky,.bottom-nav,.wa-fab{display:none!important;}
+  }
 `;
-if (!document.getElementById("tr-global-css")) {
-  const s = document.createElement("style");
-  s.id = "tr-global-css"; s.textContent = globalCss;
-  document.head.appendChild(s);
-}
+{ const existing = document.getElementById("tr-global-css"); if (existing) existing.remove(); const s = document.createElement("style"); s.id = "tr-global-css"; s.textContent = globalCss; document.head.appendChild(s); }
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  INLINE EDITABLE FIELD  (click to edit any text in-place)
@@ -383,7 +698,7 @@ const AdminLoginModal = React.memo(function AdminLoginModal({ onSuccess, onClose
 // ─────────────────────────────────────────────────────────────────────────────
 //  ADMIN PANEL  (full management: medicines, services, testimonials, faqs, contact)
 // ─────────────────────────────────────────────────────────────────────────────
-const AdminPanel = React.memo(function AdminPanel({ meds, services, testimonials, faqs, contact, onClose, onToast, onUpdateMeds, onUpdateServices, onUpdateTestimonials, onUpdateFaqs, onUpdateContact, onUploadImg, onLogout }) {
+const AdminPanel = React.memo(function AdminPanel({ meds, services, testimonials, faqs, contact, blogs, doctors, onClose, onToast, onUpdateMeds, onUpdateServices, onUpdateTestimonials, onUpdateFaqs, onUpdateContact, onUpdateBlogs, onUpdateDoctors, onUploadImg, onLogout }) {
   const [tab, setTab] = useState("meds");
   const card = mkCard();
   const btn  = mkBtn;
@@ -482,15 +797,15 @@ const AdminPanel = React.memo(function AdminPanel({ meds, services, testimonials
   const deleteFaq = (id) => { onUpdateFaqs(faqs.filter(f=>f.id!==id)); onToast("FAQ deleted"); };
 
   // ── Contact form ───────────────────────────────────────────
-  const [ctForm, setCtForm] = useState({...contact});
+  const [ctForm, setCtForm] = useState({...(contact || DEFAULT_CONTACT)});
   const updCt = (k,v) => setCtForm(p=>({...p,[k]:v}));
   const saveCt = () => { onUpdateContact(ctForm); onToast("Contact details saved ✅"); };
 
-  const TABS = [["meds","💊 Medicines"],["services","🩺 Services"],["testimonials","⭐ Reviews"],["faqs","❓ FAQs"],["contact","📞 Contact"]];
+  const TABS = [["meds","💊 Medicines"],["services","🩺 Services"],["testimonials","⭐ Reviews"],["faqs","❓ FAQs"],["contact","📞 Contact"],["blogs","📰 Blog"],["doctors","👨‍⚕️ Doctors"]];
 
   return (
-    <div style={{ position:"fixed",inset:0,background:"rgba(0,0,0,.7)",zIndex:500,display:"flex",alignItems:"center",justifyContent:"center",padding:12,animation:"fadeIn .2s ease" }} onClick={onClose}>
-      <div style={{ ...card,width:"min(820px,100%)",maxHeight:"92vh",display:"flex",flexDirection:"column",padding:0,overflow:"hidden",animation:"popIn .3s cubic-bezier(.22,1,.36,1)" }} onClick={e=>e.stopPropagation()}>
+    <div style={{ position:"fixed",inset:0,background:"rgba(0,0,0,.7)",zIndex:500,display:"flex",alignItems:"center",justifyContent:"center",padding:"clamp(8px,3vw,16px)",animation:"fadeIn .2s ease" }} onClick={onClose}>
+      <div style={{ ...card,width:"min(820px,calc(100vw - 16px))",maxHeight:"92vh",display:"flex",flexDirection:"column",padding:0,overflow:"hidden",animation:"popIn .3s cubic-bezier(.22,1,.36,1)" }} onClick={e=>e.stopPropagation()}>
 
         {/* Header */}
         <div style={{ background:"linear-gradient(135deg,#4f46e5,#059669)",padding:"16px 22px",display:"flex",justifyContent:"space-between",alignItems:"center",flexShrink:0 }}>
@@ -708,6 +1023,105 @@ const AdminPanel = React.memo(function AdminPanel({ meds, services, testimonials
             </div>
           )}
 
+          {/* ── BLOG ─────────────────────────────────────────────── */}
+          {tab === "blogs" && (
+            <div>
+              {/* Blog form */}
+              {(() => {
+                const [bf, setBf] = React.useState({ title:"",category:"Health Tips",summary:"",content:"",emoji:"📰",tag:"Tips",img:null });
+                const [editId, setEditId] = React.useState(null);
+                const updBf = (k,v) => setBf(p=>({...p,[k]:v}));
+                const saveBlog = () => {
+                  if (!bf.title.trim()) { onToast("Title required","err"); return; }
+                  if (editId) { onUpdateBlogs(blogs.map(b=>b.id===editId?{...b,...bf}:b)); onToast("Blog updated ✅"); }
+                  else { onUpdateBlogs([...blogs,{...bf,id:Date.now(),date:new Date().toLocaleDateString("en-IN"),author:"TR Pharmacy"}]); onToast("Blog post added ✅"); }
+                  setBf({title:"",category:"Health Tips",summary:"",content:"",emoji:"📰",tag:"Tips",img:null}); setEditId(null);
+                };
+                return (
+                  <div>
+                    <div style={{ display:"flex",flexDirection:"column",gap:10,marginBottom:16 }}>
+                      {[["Title *","title","text"],["Category","category","text"],["Summary","summary","text"],["Tag","tag","text"]].map(([l,k,t])=>(
+                        <div key={k}><label style={{ fontWeight:700,fontSize:11,marginBottom:4,display:"block" }}>{l}</label><input style={inp} type={t} value={bf[k]} onChange={e=>updBf(k,e.target.value)}/></div>
+                      ))}
+                      <div><label style={{ fontWeight:700,fontSize:11,marginBottom:4,display:"block" }}>Content (use \n for line breaks)</label><textarea style={{ ...inp,height:120,resize:"vertical" }} value={bf.content} onChange={e=>updBf("content",e.target.value)} placeholder="Write blog content..."/></div>
+                      <div style={{ display:"flex",gap:6,flexWrap:"wrap" }}>
+                        {["📰","💊","🩺","🩸","☀️","🌿","❤️","🧠"].map(e=><button key={e} onClick={()=>updBf("emoji",e)} style={{ width:30,height:30,borderRadius:7,border:`2px solid ${bf.emoji===e?"#059669":"var(--bdr)"}`,background:bf.emoji===e?"#d1fae5":"var(--bg3)",cursor:"pointer",fontSize:15 }}>{e}</button>)}
+                      </div>
+                    </div>
+                    <div style={{ display:"flex",gap:8,marginBottom:20 }}>
+                      <button style={{ ...btn(),flex:1,justifyContent:"center" }} className="hbtn" onClick={saveBlog}>{editId?"✏️ Update Post":"➕ Add Blog Post"}</button>
+                      {editId&&<button style={btn("ghost")} onClick={()=>{setBf({title:"",category:"Health Tips",summary:"",content:"",emoji:"📰",tag:"Tips",img:null});setEditId(null);}}>Cancel</button>}
+                    </div>
+                    <div style={{ display:"flex",flexDirection:"column",gap:8 }}>
+                      {blogs.map(b=>(
+                        <div key={b.id} style={{ ...card,padding:"12px 14px",background:"var(--bg3)",display:"flex",gap:10,alignItems:"center" }}>
+                          <div style={{ fontSize:24,flexShrink:0 }}>{b.emoji}</div>
+                          <div style={{ flex:1,minWidth:0 }}>
+                            <div style={{ fontWeight:800,fontSize:13 }}>{b.title}</div>
+                            <div style={{ fontSize:11,color:"var(--text2)" }}>{b.date} · {b.category}</div>
+                          </div>
+                          <div style={{ display:"flex",gap:6 }}>
+                            <button onClick={()=>{setBf({...b});setEditId(b.id);}} style={{ ...btn("ghost"),padding:"5px 10px" }}><EditIcon/></button>
+                            <button onClick={()=>onUpdateBlogs(blogs.filter(x=>x.id!==b.id))} style={{ ...btn("red"),padding:"5px 10px" }}><TrashIcon/></button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+          )}
+
+          {/* ── DOCTORS ──────────────────────────────────────────── */}
+          {tab === "doctors" && (
+            <div>
+              {(() => {
+                const [df, setDf] = React.useState({ name:"",specialty:"",qual:"",exp:"",phone:"",timing:"",fee:"",location:"",available:true,img:null });
+                const [editId, setEditId] = React.useState(null);
+                const updDf = (k,v) => setDf(p=>({...p,[k]:v}));
+                const saveDoc = () => {
+                  if (!df.name.trim()) { onToast("Doctor name required","err"); return; }
+                  if (editId) { onUpdateDoctors(doctors.map(d=>d.id===editId?{...d,...df}:d)); onToast("Doctor updated ✅"); }
+                  else { onUpdateDoctors([...doctors,{...df,id:Date.now(),fee:Number(df.fee)||300}]); onToast("Doctor added ✅"); }
+                  setDf({name:"",specialty:"",qual:"",exp:"",phone:"",timing:"",fee:"",location:"",available:true,img:null}); setEditId(null);
+                };
+                return (
+                  <div>
+                    <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:16 }}>
+                      {[["Name *","name","text"],["Specialty","specialty","text"],["Qualification","qual","text"],["Experience","exp","text"],["Phone","phone","tel"],["Timing","timing","text"],["Fee ₹","fee","number"],["Location","location","text"]].map(([l,k,t])=>(
+                        <div key={k}><label style={{ fontWeight:700,fontSize:11,marginBottom:4,display:"block" }}>{l}</label><input style={inp} type={t} value={df[k]} onChange={e=>updDf(k,e.target.value)}/></div>
+                      ))}
+                      <div style={{ display:"flex",alignItems:"center",gap:8 }}>
+                        <input type="checkbox" checked={df.available} onChange={e=>updDf("available",e.target.checked)} id="doc-avail" style={{ width:16,height:16 }}/>
+                        <label htmlFor="doc-avail" style={{ fontWeight:700,fontSize:12 }}>Currently Available</label>
+                      </div>
+                    </div>
+                    <div style={{ display:"flex",gap:8,marginBottom:20 }}>
+                      <button style={{ ...btn(),flex:1,justifyContent:"center" }} className="hbtn" onClick={saveDoc}>{editId?"✏️ Update Doctor":"➕ Add Doctor"}</button>
+                      {editId&&<button style={btn("ghost")} onClick={()=>{setDf({name:"",specialty:"",qual:"",exp:"",phone:"",timing:"",fee:"",location:"",available:true,img:null});setEditId(null);}}>Cancel</button>}
+                    </div>
+                    <div style={{ display:"flex",flexDirection:"column",gap:8 }}>
+                      {doctors.map(d=>(
+                        <div key={d.id} style={{ ...card,padding:"12px 14px",background:"var(--bg3)",display:"flex",gap:10,alignItems:"center" }}>
+                          <div style={{ fontSize:24,flexShrink:0 }}>👨‍⚕️</div>
+                          <div style={{ flex:1,minWidth:0 }}>
+                            <div style={{ fontWeight:800,fontSize:13 }}>{d.name}</div>
+                            <div style={{ fontSize:11,color:"var(--text2)" }}>{d.specialty} · ₹{d.fee} · <span style={{ color:d.available?"#059669":"#94a3b8" }}>{d.available?"Available":"Unavailable"}</span></div>
+                          </div>
+                          <div style={{ display:"flex",gap:6 }}>
+                            <button onClick={()=>{setDf({...d,fee:String(d.fee)});setEditId(d.id);}} style={{ ...btn("ghost"),padding:"5px 10px" }}><EditIcon/></button>
+                            <button onClick={()=>onUpdateDoctors(doctors.filter(x=>x.id!==d.id))} style={{ ...btn("red"),padding:"5px 10px" }}><TrashIcon/></button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+          )}
+
         </div>
       </div>
     </div>
@@ -716,45 +1130,373 @@ const AdminPanel = React.memo(function AdminPanel({ meds, services, testimonials
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  SUBMISSIONS PANEL
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  SUBSCRIPTION PLANS MODAL
+// ─────────────────────────────────────────────────────────────────────────────
+const PLANS = [
+  {
+    id:"basic", label:"Basic", price:0, period:"Forever Free", color:"#64748b", bg:"#f8fafc",
+    icon:"🆓", popular:false,
+    features:["Browse all medicines","Upload 1 prescription/month","Standard delivery","Basic health tips","WhatsApp support"],
+    locked:["Priority delivery","Medicine reminders","Exclusive discounts","Dedicated pharmacist","Free health checks"],
+  },
+  {
+    id:"silver", label:"Silver", price:99, period:"per month", color:"#0ea5e9", bg:"linear-gradient(135deg,#e0f2fe,#f0f9ff)",
+    icon:"🥈", popular:false,
+    features:["Everything in Basic","Unlimited prescriptions","Priority home delivery","5% discount on all orders","Medicine refill reminders","Monthly health newsletter"],
+    locked:["Free BP/Sugar check","Dedicated pharmacist line","Emergency medicine delivery"],
+  },
+  {
+    id:"gold", label:"Gold", price:199, period:"per month", color:"#f59e0b", bg:"linear-gradient(135deg,#fef3c7,#fffbeb)",
+    icon:"🥇", popular:true,
+    features:["Everything in Silver","Free BP & Sugar check","10% discount on all orders","Dedicated WhatsApp pharmacist","Emergency medicine delivery","Free health consultation","Priority order processing","Exclusive member offers"],
+    locked:[],
+  },
+];
+
+const SubscriptionModal = React.memo(function SubscriptionModal({ onClose, onToast, contact: contactProp }) {
+  const contact = contactProp || DEFAULT_CONTACT;
+  const [selected, setSelected] = React.useState(null);
+  const [step, setStep] = React.useState("plans"); // plans | checkout | success
+  const [payForm, setPayForm] = React.useState({ name:"", phone:"", upi:"" });
+  const card = mkCard();
+  const btn  = mkBtn;
+  const inp  = mkInp();
+
+  const handleSubscribe = () => {
+    if (!payForm.name || !payForm.phone) { onToast("Please fill Name and Phone","err"); return; }
+    // Save subscription to localStorage
+    const sub = { plan:selected.id, name:payForm.name, phone:payForm.phone, price:selected.price, startDate:new Date().toLocaleDateString("en-IN"), status:"active" };
+    lsSet("trp_subscription", sub);
+    setStep("success");
+    onToast(`🎉 ${selected.label} plan activated!`);
+  };
+
+  const savedSub = lsGet("trp_subscription", null);
+
+  return (
+    <div style={{ position:"fixed",inset:0,background:"rgba(0,0,0,.72)",zIndex:600,display:"flex",alignItems:"center",justifyContent:"center",padding:"clamp(8px,3vw,16px)",animation:"fadeIn .2s ease",overflowY:"auto" }} onClick={onClose}>
+      <div style={{ width:"min(860px,calc(100vw - 16px))",background:"var(--bg2)",borderRadius:22,overflow:"hidden",animation:"popIn .32s cubic-bezier(.22,1,.36,1)",boxShadow:"0 24px 80px rgba(0,0,0,.4)",maxHeight:"95vh",overflowY:"auto" }} onClick={e=>e.stopPropagation()}>
+
+        {/* Header */}
+        <div style={{ background:"linear-gradient(135deg,#059669,#0ea5e9)",padding:"24px 26px",position:"relative",textAlign:"center" }}>
+          <button onClick={onClose} style={{ position:"absolute",top:14,right:14,background:"rgba(255,255,255,.2)",border:"none",borderRadius:50,width:30,height:30,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:"#fff" }}><CloseIcon/></button>
+          <div style={{ fontSize:36,marginBottom:8 }}>💎</div>
+          <h2 style={{ color:"#fff",fontWeight:900,fontSize:22,marginBottom:4 }}>TR Pharmacy Membership Plans</h2>
+          <p style={{ color:"rgba(255,255,255,.8)",fontSize:13 }}>Join thousands of satisfied customers — Get priority service & exclusive benefits</p>
+          {savedSub && (
+            <div style={{ display:"inline-block",marginTop:10,background:"rgba(255,255,255,.2)",borderRadius:50,padding:"5px 16px",fontSize:12,color:"#fff",fontWeight:700 }}>
+              ✅ You are on <b>{savedSub.plan.toUpperCase()}</b> plan since {savedSub.startDate}
+            </div>
+          )}
+        </div>
+
+        {step === "plans" && (
+          <div style={{ padding:"24px 20px" }}>
+            <div style={{ display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(240px,1fr))",gap:16,marginBottom:20 }}>
+              {PLANS.map(plan => (
+                <div key={plan.id}
+                  onClick={()=>setSelected(plan)}
+                  style={{ borderRadius:18,padding:22,cursor:"pointer",border:`2px solid ${selected?.id===plan.id?"#059669":plan.color}`,background:plan.bg,position:"relative",transition:"all .22s",transform:selected?.id===plan.id?"scale(1.02)":"scale(1)",boxShadow:selected?.id===plan.id?"0 8px 32px rgba(5,150,105,.2)":"0 2px 8px rgba(0,0,0,.06)" }}
+                >
+                  {plan.popular && (
+                    <div style={{ position:"absolute",top:-10,left:"50%",transform:"translateX(-50%)",background:"linear-gradient(135deg,#f59e0b,#ef4444)",color:"#fff",borderRadius:50,padding:"3px 14px",fontSize:11,fontWeight:800,whiteSpace:"nowrap",boxShadow:"0 3px 10px rgba(245,158,11,.4)" }}>
+                      ⭐ MOST POPULAR
+                    </div>
+                  )}
+                  <div style={{ textAlign:"center",marginBottom:14 }}>
+                    <div style={{ fontSize:38,marginBottom:6 }}>{plan.icon}</div>
+                    <div style={{ fontWeight:900,fontSize:18,color:plan.color }}>{plan.label}</div>
+                    <div style={{ marginTop:6 }}>
+                      {plan.price === 0
+                        ? <span style={{ fontSize:26,fontWeight:900,color:"#059669" }}>Free</span>
+                        : <><span style={{ fontSize:28,fontWeight:900,color:plan.color }}>₹{plan.price}</span><span style={{ fontSize:12,color:"#64748b" }}>/month</span></>
+                      }
+                    </div>
+                  </div>
+                  <div style={{ display:"flex",flexDirection:"column",gap:6 }}>
+                    {plan.features.map(f=>(
+                      <div key={f} style={{ display:"flex",gap:8,alignItems:"flex-start",fontSize:12 }}>
+                        <span style={{ color:"#059669",fontWeight:800,flexShrink:0,marginTop:1 }}>✓</span>
+                        <span style={{ color:"var(--text)",lineHeight:1.4 }}>{f}</span>
+                      </div>
+                    ))}
+                    {plan.locked.map(f=>(
+                      <div key={f} style={{ display:"flex",gap:8,alignItems:"flex-start",fontSize:12,opacity:.45 }}>
+                        <span style={{ color:"#94a3b8",flexShrink:0,marginTop:1 }}>✕</span>
+                        <span style={{ color:"var(--text2)",lineHeight:1.4,textDecoration:"line-through" }}>{f}</span>
+                      </div>
+                    ))}
+                  </div>
+                  {selected?.id === plan.id && (
+                    <div style={{ marginTop:14,textAlign:"center" }}>
+                      <div style={{ width:22,height:22,borderRadius:11,background:"#059669",display:"inline-flex",alignItems:"center",justifyContent:"center",color:"#fff",fontWeight:800,fontSize:13 }}>✓</div>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+            {selected && (
+              <div style={{ textAlign:"center" }}>
+                {selected.price === 0
+                  ? <button style={{ ...btn(),padding:"14px 40px",fontSize:15 }} className="hbtn" onClick={()=>{ lsSet("trp_subscription",{plan:"basic",name:"Guest",phone:"",price:0,startDate:new Date().toLocaleDateString("en-IN"),status:"active"}); setStep("success"); }}>
+                      ✅ Activate Free Plan
+                    </button>
+                  : <button style={{ ...btn(),padding:"14px 40px",fontSize:15,background:`linear-gradient(135deg,${selected.color},#059669)` }} className="hbtn" onClick={()=>setStep("checkout")}>
+                      💳 Subscribe to {selected.label} — ₹{selected.price}/mo →
+                    </button>
+                }
+                <p style={{ fontSize:11,color:"var(--text2)",marginTop:8 }}>Cancel anytime · No hidden charges</p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {step === "checkout" && selected && (
+          <div style={{ padding:"24px 22px",maxWidth:440,margin:"0 auto" }}>
+            <button onClick={()=>setStep("plans")} style={{ ...btn("ghost"),fontSize:12,marginBottom:18,border:"1px solid var(--bdr)" }}>← Back to Plans</button>
+            <h3 style={{ fontWeight:900,fontSize:17,marginBottom:4 }}>Checkout — {selected.icon} {selected.label} Plan</h3>
+            <p style={{ color:"var(--text2)",fontSize:13,marginBottom:20 }}>₹{selected.price}/month · Cancel anytime</p>
+
+            {/* Order summary */}
+            <div style={{ background:"var(--bg3)",borderRadius:14,padding:16,marginBottom:20 }}>
+              <div style={{ display:"flex",justifyContent:"space-between",fontSize:13,marginBottom:6 }}><span>Plan</span><b>{selected.label}</b></div>
+              <div style={{ display:"flex",justifyContent:"space-between",fontSize:13,marginBottom:6 }}><span>Billing</span><b>Monthly</b></div>
+              <div style={{ borderTop:"1px dashed var(--bdr)",paddingTop:10,marginTop:6,display:"flex",justifyContent:"space-between",fontWeight:900,fontSize:16 }}>
+                <span>Total</span><span style={{ color:selected.color }}>₹{selected.price}/month</span>
+              </div>
+            </div>
+
+            <div style={{ display:"flex",flexDirection:"column",gap:13,marginBottom:18 }}>
+              <div><label style={{ fontWeight:700,fontSize:11,marginBottom:4,display:"block" }}>Your Name *</label><input style={inp} placeholder="Full name" value={payForm.name} onChange={e=>setPayForm(p=>({...p,name:e.target.value}))}/></div>
+              <div><label style={{ fontWeight:700,fontSize:11,marginBottom:4,display:"block" }}>Phone Number *</label><input style={inp} type="tel" placeholder="10-digit number" value={payForm.phone} onChange={e=>setPayForm(p=>({...p,phone:e.target.value}))}/></div>
+            </div>
+
+            {/* Payment options */}
+            <div style={{ marginBottom:18 }}>
+              <div style={{ fontWeight:700,fontSize:12,marginBottom:10,color:"var(--text2)" }}>PAYMENT METHOD</div>
+              {/* UPI / QR */}
+              <div style={{ ...card,marginBottom:10,padding:16,background:"var(--bg3)" }}>
+                <div style={{ fontWeight:800,fontSize:13,marginBottom:10 }}>📱 UPI / QR Code Scan</div>
+                <div style={{ display:"flex",gap:12,alignItems:"center",flexWrap:"wrap" }}>
+                  <div style={{ width:100,height:100,background:"repeating-conic-gradient(#000 0% 25%,#fff 0% 50%) 0 0 / 7px 7px",borderRadius:8,flexShrink:0 }}/>
+                  <div style={{ fontSize:12 }}>
+                    <div style={{ fontWeight:700,marginBottom:4 }}>Scan & Pay ₹{selected.price}</div>
+                    <div style={{ color:"var(--text2)",marginBottom:2 }}>UPI: <b>trpharmacy@paytm</b></div>
+                    <div style={{ color:"var(--text2)",marginBottom:2 }}>GPay: <b>{(contact?.phone1 || '6389482072')}</b></div>
+                    <div style={{ color:"var(--text2)" }}>PhonePe: <b>{(contact?.phone1 || '6389482072')}</b></div>
+                  </div>
+                </div>
+                <div style={{ marginTop:10 }}><label style={{ fontWeight:700,fontSize:11,marginBottom:4,display:"block" }}>UPI Transaction ID (after payment)</label><input style={inp} placeholder="e.g. 4139823748237" value={payForm.upi} onChange={e=>setPayForm(p=>({...p,upi:e.target.value}))}/></div>
+              </div>
+              {/* WhatsApp pay */}
+              <a href={`https://wa.me/91${contact?.phone1 || '6389482072'}?text=Hi%20TR%20Pharmacy%2C%20I%20want%20to%20subscribe%20to%20${selected.label}%20plan%20%E2%82%B9${selected.price}%2Fmonth.%20My%20name%3A%20${payForm.name}%2C%20Phone%3A%20${payForm.phone}`}
+                target="_blank" rel="noreferrer"
+                style={{ ...card,display:"flex",alignItems:"center",gap:11,padding:"14px 16px",background:"#dcfce7",border:"1.5px solid #bbf7d0",textDecoration:"none",borderRadius:14 }} className="lift">
+                <div style={{ width:38,height:38,borderRadius:11,background:"#25d366",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0 }}><WAIcon/></div>
+                <div><div style={{ fontWeight:900,color:"#166534",fontSize:13 }}>Pay via WhatsApp</div><div style={{ fontSize:11,color:"#15803d" }}>Message us & we'll guide payment</div></div>
+                <span style={{ marginLeft:"auto",color:"#15803d" }}>→</span>
+              </a>
+            </div>
+
+            <button style={{ ...btn(),padding:"14px",fontSize:15,justifyContent:"center",width:"100%",background:`linear-gradient(135deg,${selected.color},#059669)` }} className="hbtn" onClick={handleSubscribe}>
+              ✅ Confirm Subscription — ₹{selected.price}/mo
+            </button>
+            <p style={{ textAlign:"center",fontSize:11,color:"var(--text2)",marginTop:8 }}>
+              After payment, we'll activate your plan within 2 hours via WhatsApp.
+            </p>
+          </div>
+        )}
+
+        {step === "success" && (
+          <div style={{ padding:"40px 24px",textAlign:"center" }}>
+            <div style={{ fontSize:68,marginBottom:14,animation:"popIn .6s cubic-bezier(.22,1,.36,1) both" }}>🎉</div>
+            <h2 style={{ fontWeight:900,fontSize:22,marginBottom:8 }}>
+              {selected?.price === 0 ? "Free Plan Activated!" : `${selected?.label} Plan Subscribed!`}
+            </h2>
+            <p style={{ color:"var(--text2)",fontSize:14,marginBottom:20,maxWidth:360,margin:"0 auto 20px" }}>
+              {selected?.price === 0
+                ? "You now have access to all basic features of TR Pharmacy."
+                : `Thank you! Your ${selected?.label} plan is being activated. We'll confirm via WhatsApp (${contact?.phone1 || '6389482072'}) within 2 hours.`
+              }
+            </p>
+            {selected?.price > 0 && (
+              <div style={{ ...card,background:"var(--bg3)",padding:16,marginBottom:20,maxWidth:380,margin:"0 auto 20px",textAlign:"left" }}>
+                <div style={{ fontWeight:800,marginBottom:8,fontSize:13 }}>Your Plan Details:</div>
+                <div style={{ fontSize:12,color:"var(--text2)",display:"flex",flexDirection:"column",gap:4 }}>
+                  <div>📦 Plan: <b style={{ color:"var(--text)" }}>{selected?.label}</b></div>
+                  <div>💰 Amount: <b style={{ color:"#059669" }}>₹{selected?.price}/month</b></div>
+                  <div>📱 Contact: <b style={{ color:"var(--text)" }}>{payForm.phone}</b></div>
+                  <div>📅 Start: <b style={{ color:"var(--text)" }}>{new Date().toLocaleDateString("en-IN")}</b></div>
+                </div>
+              </div>
+            )}
+            <div style={{ display:"flex",gap:10,justifyContent:"center",flexWrap:"wrap" }}>
+              <button style={btn()} onClick={onClose}>Continue Shopping</button>
+              <a href={`https://wa.me/91${contact?.phone1 || '6389482072'}?text=Hi!%20I%20just%20subscribed%20to%20${selected?.label}%20plan`} target="_blank" rel="noreferrer" style={{ ...btn("wa"),textDecoration:"none" }}>💬 WhatsApp Us</a>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  OFFERS BANNER  (shown on home page)
+// ─────────────────────────────────────────────────────────────────────────────
+const OFFERS = [
+  "🎉 Grand Opening Special — 10% OFF on all orders above ₹500 · Use code: TROPEN10",
+  "💊 Free home delivery on orders above ₹500 · Jankipuram & nearby areas",
+  "🥇 Join Gold Membership — Free BP check + 10% discount every month!",
+  "📋 Upload prescription & get medicines delivered in 2 hours!",
+  "🎁 Refer a friend — Get ₹50 off on your next order",
+];
+
+const OfferBanner = React.memo(function OfferBanner({ onSubscribeOpen }) {
+  const [idx, setIdx] = React.useState(0);
+  React.useEffect(() => {
+    const t = setInterval(() => setIdx(i => (i+1) % OFFERS.length), 3500);
+    return () => clearInterval(t);
+  }, []);
+  return (
+    <div style={{ background:"linear-gradient(90deg,#7c3aed,#059669,#0ea5e9,#7c3aed)",backgroundSize:"300% 100%",animation:"gradShift 6s ease infinite",padding:"9px 16px",display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,flexWrap:"wrap" }}>
+      <div style={{ flex:1,textAlign:"center",color:"#fff",fontWeight:700,fontSize:12,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",animation:"fadeIn .5s ease" }} key={idx}>
+        {OFFERS[idx]}
+      </div>
+      <button onClick={onSubscribeOpen} style={{ background:"#fff",border:"none",borderRadius:50,padding:"5px 14px",fontSize:11,fontWeight:800,color:"#059669",cursor:"pointer",flexShrink:0,whiteSpace:"nowrap",transition:"transform .15s" }} className="hbtn">
+        View Plans →
+      </button>
+    </div>
+  );
+});
+
 // ─────────────────────────────────────────────────────────────────────────────
 const DBPanel = React.memo(function DBPanel({ onClose }) {
   const card = mkCard();
+  const btn  = mkBtn;
+  // Local state to force re-render after delete
+  const [, forceUpdate] = React.useReducer(x => x + 1, 0);
+  const [confirmDel, setConfirmDel] = React.useState(null); // {type:'rx'|'ct', idx}
+
+  const deleteRx = (idx) => {
+    DB.prescriptions.splice(idx, 1);
+    // Also clear the user's submit lock so they can re-submit
+    forceUpdate();
+    setConfirmDel(null);
+  };
+  const deleteCt = (idx) => {
+    DB.contacts.splice(idx, 1);
+    forceUpdate();
+    setConfirmDel(null);
+  };
+
   return (
-    <div style={{ position:"fixed",inset:0,background:"rgba(0,0,0,.6)",zIndex:400,display:"flex",alignItems:"center",justifyContent:"center",padding:16,animation:"fadeIn .2s ease" }} onClick={onClose}>
-      <div style={{ ...card,width:"min(680px,100%)",maxHeight:"88vh",overflowY:"auto",padding:26 }} onClick={e=>e.stopPropagation()}>
-        <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20 }}>
-          <h2 style={{ fontWeight:900,fontSize:17 }}>📬 Form Submissions</h2>
-          <button onClick={onClose} style={{ background:"none",border:"none",cursor:"pointer",color:"var(--text2)" }}><CloseIcon/></button>
+    <div style={{ position:"fixed",inset:0,background:"rgba(0,0,0,.6)",zIndex:400,display:"flex",alignItems:"center",justifyContent:"center",padding:"clamp(8px,3vw,16px)",animation:"fadeIn .2s ease" }} onClick={onClose}>
+      <div style={{ ...card,width:"min(700px,calc(100vw - 16px))",maxHeight:"90vh",overflowY:"auto",padding:0,overflow:"hidden" }} onClick={e=>e.stopPropagation()}>
+
+        {/* Header */}
+        <div style={{ background:"linear-gradient(135deg,#059669,#0ea5e9)",padding:"18px 22px",display:"flex",justifyContent:"space-between",alignItems:"center" }}>
+          <div>
+            <div style={{ color:"#fff",fontWeight:900,fontSize:17 }}>📬 Form Submissions</div>
+            <div style={{ color:"rgba(255,255,255,.75)",fontSize:11,marginTop:2 }}>
+              {DB.prescriptions.length} prescription{DB.prescriptions.length!==1?"s":""} · {DB.contacts.length} message{DB.contacts.length!==1?"s":""}
+            </div>
+          </div>
+          <button onClick={onClose} style={{ background:"rgba(255,255,255,.2)",border:"none",borderRadius:50,width:30,height:30,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:"#fff" }}><CloseIcon/></button>
         </div>
-        <h3 style={{ fontWeight:800,color:"#059669",marginBottom:8,fontSize:14 }}>💊 Prescriptions ({DB.prescriptions.length})</h3>
-        {DB.prescriptions.length === 0
-          ? <p style={{ color:"var(--text2)",fontSize:13,marginBottom:16 }}>No submissions yet.</p>
-          : DB.prescriptions.map((s,i) => (
-            <div key={i} style={{ ...card,background:"var(--bg3)",padding:13,marginBottom:9,fontSize:13 }}>
-              <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:5 }}>
-                <div><b>Name:</b> {s.name}</div><div><b>Phone:</b> {s.phone}</div>
-                <div><b>Address:</b> {s.address||"—"}</div><div><b>Medicine:</b> {s.medicine||"—"}</div>
-                <div style={{ gridColumn:"1/-1" }}><b>Note:</b> {s.note||"—"}</div>
-                <div style={{ gridColumn:"1/-1",color:"var(--text2)",fontSize:11 }}>⏰ {s.time}</div>
-                {s.preview && <img src={s.preview} alt="rx" style={{ gridColumn:"1/-1",width:"100%",maxHeight:130,objectFit:"cover",borderRadius:8,marginTop:5 }}/>}
+
+        <div style={{ padding:"20px 22px",overflowY:"auto",maxHeight:"calc(90vh - 80px)" }}>
+
+          {/* Confirm delete modal */}
+          {confirmDel && (
+            <div style={{ background:"#fef2f2",border:"1.5px solid #fca5a5",borderRadius:14,padding:"16px 18px",marginBottom:18,animation:"popIn .25s ease" }}>
+              <div style={{ fontWeight:800,fontSize:14,color:"#dc2626",marginBottom:6 }}>🗑️ Confirm Delete</div>
+              <p style={{ fontSize:13,color:"#7f1d1d",marginBottom:12 }}>
+                Are you sure you want to permanently delete this {confirmDel.type==="rx"?"prescription":"message"}? This cannot be undone.
+              </p>
+              <div style={{ display:"flex",gap:8 }}>
+                <button style={{ ...btn(),background:"#dc2626",fontSize:12,padding:"7px 16px" }}
+                  onClick={()=>confirmDel.type==="rx" ? deleteRx(confirmDel.idx) : deleteCt(confirmDel.idx)}>
+                  Yes, Delete
+                </button>
+                <button style={{ ...btn("ghost"),fontSize:12,padding:"7px 16px",border:"1px solid var(--bdr)" }}
+                  onClick={()=>setConfirmDel(null)}>
+                  Cancel
+                </button>
               </div>
             </div>
-          ))
-        }
-        <h3 style={{ fontWeight:800,color:"#0ea5e9",marginBottom:8,marginTop:14,fontSize:14 }}>📞 Contact Messages ({DB.contacts.length})</h3>
-        {DB.contacts.length === 0
-          ? <p style={{ color:"var(--text2)",fontSize:13 }}>No messages yet.</p>
-          : DB.contacts.map((s,i) => (
-            <div key={i} style={{ ...card,background:"var(--bg3)",padding:13,marginBottom:9,fontSize:13 }}>
-              <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:5 }}>
-                <div><b>Name:</b> {s.name}</div><div><b>Phone:</b> {s.phone}</div>
-                <div style={{ gridColumn:"1/-1" }}><b>Email:</b> {s.email||"—"}</div>
-                <div style={{ gridColumn:"1/-1" }}><b>Message:</b> {s.msg}</div>
-                <div style={{ gridColumn:"1/-1",color:"var(--text2)",fontSize:11 }}>⏰ {s.time}</div>
+          )}
+
+          {/* Prescriptions */}
+          <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10 }}>
+            <h3 style={{ fontWeight:800,color:"#059669",fontSize:14 }}>💊 Prescriptions ({DB.prescriptions.length})</h3>
+            {DB.prescriptions.length > 0 && (
+              <button style={{ ...btn("red"),fontSize:11,padding:"4px 10px" }}
+                onClick={()=>{ if(window.confirm("Delete ALL prescriptions?")){ DB.prescriptions.splice(0); forceUpdate(); } }}>
+                🗑️ Clear All
+              </button>
+            )}
+          </div>
+          {DB.prescriptions.length === 0
+            ? <p style={{ color:"var(--text2)",fontSize:13,marginBottom:16,padding:"12px",background:"var(--bg3)",borderRadius:10,textAlign:"center" }}>No prescription submissions yet.</p>
+            : DB.prescriptions.map((s,i) => (
+              <div key={i} style={{ ...card,background:"var(--bg3)",padding:14,marginBottom:10,fontSize:13,position:"relative" }}>
+                {/* Delete button */}
+                <button
+                  onClick={()=>setConfirmDel({type:"rx",idx:i})}
+                  title="Delete this submission"
+                  style={{ position:"absolute",top:10,right:10,background:"#fee2e2",border:"none",borderRadius:8,cursor:"pointer",color:"#dc2626",padding:"4px 8px",fontSize:11,fontWeight:700,display:"flex",alignItems:"center",gap:4 }}
+                ><TrashIcon/> Delete</button>
+                <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:6,paddingRight:80 }}>
+                  <div><b>Name:</b> {s.name}</div>
+                  <div><b>Phone:</b> <a href={`tel:${s.phone}`} style={{ color:"#059669",textDecoration:"none",fontWeight:600 }}>{s.phone}</a></div>
+                  <div><b>Address:</b> {s.address||"—"}</div>
+                  <div><b>Medicine:</b> {s.medicine||"—"}</div>
+                  <div style={{ gridColumn:"1/-1" }}><b>Note:</b> {s.note||"—"}</div>
+                  <div style={{ gridColumn:"1/-1",color:"var(--text2)",fontSize:11,marginTop:2 }}>⏰ {s.time}</div>
+                  {s.preview && (
+                    <div style={{ gridColumn:"1/-1",marginTop:8 }}>
+                      <div style={{ fontSize:11,fontWeight:700,color:"var(--text2)",marginBottom:4 }}>📷 Prescription Image:</div>
+                      <img src={s.preview} alt="rx" style={{ width:"100%",maxHeight:160,objectFit:"cover",borderRadius:9 }}/>
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
-          ))
-        }
+            ))
+          }
+
+          {/* Contact Messages */}
+          <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10,marginTop:18 }}>
+            <h3 style={{ fontWeight:800,color:"#0ea5e9",fontSize:14 }}>📞 Contact Messages ({DB.contacts.length})</h3>
+            {DB.contacts.length > 0 && (
+              <button style={{ ...btn("red"),fontSize:11,padding:"4px 10px" }}
+                onClick={()=>{ if(window.confirm("Delete ALL messages?")){ DB.contacts.splice(0); forceUpdate(); } }}>
+                🗑️ Clear All
+              </button>
+            )}
+          </div>
+          {DB.contacts.length === 0
+            ? <p style={{ color:"var(--text2)",fontSize:13,padding:"12px",background:"var(--bg3)",borderRadius:10,textAlign:"center" }}>No contact messages yet.</p>
+            : DB.contacts.map((s,i) => (
+              <div key={i} style={{ ...card,background:"var(--bg3)",padding:14,marginBottom:10,fontSize:13,position:"relative" }}>
+                <button
+                  onClick={()=>setConfirmDel({type:"ct",idx:i})}
+                  title="Delete this message"
+                  style={{ position:"absolute",top:10,right:10,background:"#fee2e2",border:"none",borderRadius:8,cursor:"pointer",color:"#dc2626",padding:"4px 8px",fontSize:11,fontWeight:700,display:"flex",alignItems:"center",gap:4 }}
+                ><TrashIcon/> Delete</button>
+                <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:6,paddingRight:80 }}>
+                  <div><b>Name:</b> {s.name}</div>
+                  <div><b>Phone:</b> <a href={`tel:${s.phone}`} style={{ color:"#0ea5e9",textDecoration:"none",fontWeight:600 }}>{s.phone}</a></div>
+                  <div style={{ gridColumn:"1/-1" }}><b>Email:</b> {s.email||"—"}</div>
+                  <div style={{ gridColumn:"1/-1" }}><b>Message:</b> {s.msg}</div>
+                  <div style={{ gridColumn:"1/-1",color:"var(--text2)",fontSize:11,marginTop:2 }}>⏰ {s.time}</div>
+                </div>
+              </div>
+            ))
+          }
+        </div>
       </div>
     </div>
   );
@@ -861,13 +1603,13 @@ const CartPanel = React.memo(function CartPanel({ cart, cartStep, setCartStep, c
 // ─────────────────────────────────────────────────────────────────────────────
 //  NAV
 // ─────────────────────────────────────────────────────────────────────────────
-const Nav = React.memo(function Nav({ dark, setDark, page, go, cartCount, onCartOpen, onDBOpen, onAdminOpen, isAdmin, onLogout }) {
+const Nav = React.memo(function Nav({ dark, setDark, page, go, cartCount, onCartOpen, onDBOpen, onAdminOpen, isAdmin, onLogout, onSubOpen }) {
   const [menuOpen, setMenuOpen] = useState(false);
-  const pages = [["home","🏠 Home"],["about","ℹ️ About"],["medicines","💊 Medicines"],["prescription","📋 Rx Upload"],["services","🩺 Services"],["contact","📞 Contact"],["opening","✅ Grand Opening"]];
+  const pages = [["home","🏠 Home"],["about","ℹ️ About"],["medicines","💊 Medicines"],["prescription","📋 Rx Upload"],["services","🩺 Services"],["blog","📰 Blog"],["tools","🧮 Tools"],["doctors","👨‍⚕️ Doctors"],["tracking","📦 Track Order"],["loyalty","⭐ Loyalty"],["contact","📞 Contact"],["opening","✅ Opening"]];
   const navGo = (p) => { go(p); setMenuOpen(false); };
   return (
-    <nav style={{ position:"sticky",top:0,zIndex:200,background:dark?"rgba(15,23,42,.97)":"rgba(255,255,255,.97)",backdropFilter:"blur(16px)",borderBottom:"1px solid var(--bdr)",boxShadow:"0 2px 18px rgba(0,0,0,.06)",transition:"background .3s" }}>
-      <div style={{ maxWidth:1200,margin:"0 auto",padding:"0 16px",display:"flex",alignItems:"center",justifyContent:"space-between",height:56 }}>
+    <nav className="nav-sticky" style={{ position:"sticky",top:0,zIndex:200,background:dark?"rgba(15,23,42,.97)":"rgba(255,255,255,.97)",backdropFilter:"blur(16px)",WebkitBackdropFilter:"blur(16px)",borderBottom:"1px solid var(--bdr)",boxShadow:"0 2px 20px rgba(0,0,0,.07)",transition:"background .3s,box-shadow .3s",width:"100%",maxWidth:"100vw" }}>
+      <div style={{ maxWidth:1200,margin:"0 auto",padding:"0 16px",display:"flex",alignItems:"center",justifyContent:"space-between",height:56,width:"100%",boxSizing:"border-box" }}>
         <div onClick={()=>navGo("home")} style={{ display:"flex",alignItems:"center",gap:9,cursor:"pointer",flexShrink:0 }}>
           <div style={{ width:32,height:32,borderRadius:9,background:"linear-gradient(135deg,#059669,#0ea5e9)",display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",fontWeight:900,fontSize:16,flexShrink:0,transition:"transform .2s" }}
             onMouseEnter={e=>{e.currentTarget.style.transform="rotate(15deg) scale(1.1)";}} onMouseLeave={e=>{e.currentTarget.style.transform="none";}}>✚</div>
@@ -887,6 +1629,7 @@ const Nav = React.memo(function Nav({ dark, setDark, page, go, cartCount, onCart
             <CartIcon/>{cartCount>0&&<span style={{ position:"absolute",top:-5,right:-5,width:16,height:16,borderRadius:8,background:"#ef4444",color:"#fff",fontSize:9,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center" }}>{cartCount}</span>}
           </button>
           {isAdmin && <button onClick={onDBOpen} title="Submissions" style={{ width:32,height:32,borderRadius:7,border:"1px solid var(--bdr)",background:"var(--bg2)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14 }} className="hbtn">📬</button>}
+          <button onClick={onSubOpen} title="Membership Plans" style={{ height:32,padding:"0 11px",borderRadius:7,border:"1px solid rgba(245,158,11,.5)",background:"linear-gradient(135deg,#fef3c7,#fffbeb)",cursor:"pointer",display:"flex",alignItems:"center",gap:4,color:"#d97706",fontSize:12,fontWeight:800 }} className="hbtn">💎<span className="hide-mobile" style={{ fontSize:11 }}>Plans</span></button>
           {isAdmin ? (
             <div style={{ display:"flex",gap:5,alignItems:"center" }}>
               <button onClick={onAdminOpen} title="Admin Panel" style={{ height:32,padding:"0 12px",borderRadius:7,border:"1px solid rgba(99,102,241,.4)",background:"linear-gradient(135deg,#4f46e5,#059669)",cursor:"pointer",display:"flex",alignItems:"center",gap:5,color:"#fff",fontSize:12,fontWeight:700 }} className="hbtn admin-badge"><AdminIcon/><span className="hide-mobile">Admin</span></button>
@@ -900,6 +1643,7 @@ const Nav = React.memo(function Nav({ dark, setDark, page, go, cartCount, onCart
       </div>
       <div className={`mob-menu${menuOpen?" open":""}`}>
         {pages.map(([p,l])=>(<button key={p} onClick={()=>navGo(p)} className={`nav-item${page===p?" active":""}`}>{l}</button>))}
+        <button onClick={()=>{onSubOpen();setMenuOpen(false);}} style={{ display:"block",width:"100%",textAlign:"left",padding:"11px 15px",borderRadius:11,marginBottom:3,fontWeight:700,fontSize:13,cursor:"pointer",border:"none",background:"rgba(245,158,11,.1)",color:"#d97706" }}>💎 Membership Plans</button>
         {isAdmin ? (
           <div style={{ display:"flex",gap:7,padding:"6px 0 4px" }}>
             <button onClick={()=>{onAdminOpen();setMenuOpen(false);}} style={{ flex:1,padding:"10px 14px",borderRadius:11,fontWeight:700,fontSize:13,cursor:"pointer",border:"none",background:"rgba(79,70,229,.1)",color:"#4f46e5" }}>⚙️ Admin Panel</button>
@@ -920,9 +1664,11 @@ const Nav = React.memo(function Nav({ dark, setDark, page, go, cartCount, onCart
 // ─────────────────────────────────────────────────────────────────────────────
 //  PAGE COMPONENTS  (all receive dynamic data via props)
 // ─────────────────────────────────────────────────────────────────────────────
-const HomePage = React.memo(function HomePage({ go, meds, services, testimonials, faqs, contact, onAddCart, onToast, onUploadImg, onRemoveImg, isAdmin }) {
+const HomePage = React.memo(function HomePage({ go, meds, services, testimonials, faqs, contact: contactProp, onAddCart, onToast, isAdmin, onUploadImg, onRemoveImg, onSubOpen }) {
+  const contact = contactProp || DEFAULT_CONTACT;
   const [tIdx, setTIdx] = useState(0);
   const [faq, setFaq]   = useState(null);
+  useReveal();
   const [nl, setNl]     = useState("");
   const card=mkCard(); const btn=mkBtn; const bdg=mkBdg; const tag=mkTag;
 
@@ -935,13 +1681,13 @@ const HomePage = React.memo(function HomePage({ go, meds, services, testimonials
         <div style={{ position:"absolute",inset:0,opacity:.05,backgroundImage:"radial-gradient(#fff 1px,transparent 1px),radial-gradient(rgba(14,165,233,.3) 2px,transparent 2px)",backgroundSize:"48px 48px,96px 96px",backgroundPosition:"0 0,24px 24px" }}/>
         <div style={{ maxWidth:1200,margin:"0 auto",position:"relative" }} className="hg">
           <div>
-            <div style={{ display:"inline-flex",alignItems:"center",gap:8,background:"rgba(255,255,255,.12)",borderRadius:50,padding:"5px 15px",fontSize:12,color:"#d1fae5",marginBottom:18,animation:"heroBadge 3s ease-in-out infinite" }}>
+            <div style={{ display:"inline-flex",alignItems:"center",gap:8,background:"rgba(255,255,255,.12)",borderRadius:50,padding:"5px 15px",fontSize:12,color:"#d1fae5",marginBottom:18,animation:"pulse 3s ease-in-out infinite" }}>
               <span className="live-dot" style={{ width:7,height:7,borderRadius:4,background:"#4ade80",display:"inline-block" }}/>Now Open — Jankipuram, Lucknow
             </div>
-            <h1 style={{ fontSize:"clamp(26px,5vw,50px)",fontWeight:900,color:"#fff",lineHeight:1.1,marginBottom:14 }}>
+            <h1 style={{ fontSize:"clamp(26px,5vw,50px)",fontWeight:900,color:"#fff",lineHeight:1.1,marginBottom:14,animation:"heroPop .65s cubic-bezier(.22,1,.36,1) both" }}>
               Your Trusted<br/><span className="grad-text">Health Partner</span><br/>in Lucknow
             </h1>
-            <p style={{ fontSize:14,color:"#a7f3d0",marginBottom:26,lineHeight:1.8 }}>{contact.about}</p>
+            <p style={{ fontSize:14,color:"#a7f3d0",marginBottom:26,lineHeight:1.8 }}>{(contact?.about || 'TR Pharmacy — Quality medicines & expert care.')}</p>
             <div style={{ display:"flex",gap:9,flexWrap:"wrap" }} className="hero-btns">
               <button onClick={(e)=>{addRipple(e);go("medicines");}} className="hbtn" style={{ padding:"11px 22px",borderRadius:50,background:"#fff",color:"#059669",fontWeight:700,fontSize:13,border:"none",cursor:"pointer",boxShadow:"0 4px 18px rgba(255,255,255,.22)" }}>🛒 Order Medicine</button>
               <button onClick={()=>go("prescription")} className="hbtn" style={{ padding:"11px 22px",borderRadius:50,background:"transparent",color:"#fff",fontWeight:700,fontSize:13,border:"2px solid rgba(255,255,255,.5)",cursor:"pointer" }}>📋 Upload Prescription</button>
@@ -951,7 +1697,7 @@ const HomePage = React.memo(function HomePage({ go, meds, services, testimonials
           <div className="float-anim hide-mobile" style={{ background:"rgba(255,255,255,.1)",borderRadius:20,padding:24,backdropFilter:"blur(12px)",border:"1px solid rgba(255,255,255,.2)" }}>
             <div style={{ fontSize:52,textAlign:"center",marginBottom:12 }}>🏥</div>
             <h3 style={{ color:"#fff",fontSize:17,fontWeight:900,textAlign:"center",marginBottom:5 }}>TR Pharmacy</h3>
-            <p style={{ color:"#a7f3d0",textAlign:"center",fontSize:11,marginBottom:16 }}>{contact.address}</p>
+            <p style={{ color:"#a7f3d0",textAlign:"center",fontSize:11,marginBottom:16 }}>{(contact?.address || 'Shop No. 7, Janki Plaza, Jankipuram, Lucknow')}</p>
             <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:9 }}>
               {[["500+","Medicines"],["100%","Genuine"],["5★","Rated"],["Fast","Delivery"]].map(([n,l])=>(
                 <div key={l} style={{ textAlign:"center",background:"rgba(255,255,255,.1)",borderRadius:10,padding:9 }}>
@@ -963,6 +1709,9 @@ const HomePage = React.memo(function HomePage({ go, meds, services, testimonials
           </div>
         </div>
       </section>
+
+      {/* Offers rotating banner */}
+      <OfferBanner onSubscribeOpen={onSubOpen}/>
 
       {/* Trust bar */}
       <div style={{ background:"#059669",padding:"12px 20px",overflowX:"auto" }}>
@@ -983,7 +1732,7 @@ const HomePage = React.memo(function HomePage({ go, meds, services, testimonials
       </section>
 
       {/* Featured Medicines */}
-      <section style={{ maxWidth:1200,margin:"0 auto",padding:"clamp(36px,5vw,58px) 20px" }}>
+      <section style={{ maxWidth:1200,margin:"0 auto",padding:"clamp(32px,5vw,56px) clamp(16px,4vw,20px)" }}>
         <div style={{ textAlign:"center",marginBottom:32 }}>
           <span style={bdg("g")}>Featured Products</span>
           <h2 style={{ fontSize:"clamp(18px,4vw,30px)",fontWeight:900,marginBottom:7 }}>Popular Medicines</h2>
@@ -994,11 +1743,28 @@ const HomePage = React.memo(function HomePage({ go, meds, services, testimonials
             <div key={m.id} style={{ ...card,padding:0,overflow:"hidden" }} className="lift">
               <div style={{ height:118,background:"linear-gradient(135deg,#d1fae5,#e0f2fe)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:46,overflow:"hidden",position:"relative" }}>
                 {m.img?<img src={m.img} alt={m.name} style={{ width:"100%",height:"100%",objectFit:"cover" }}/>:m.emoji}
-                {isAdmin && <>
-                  <label htmlFor={`h-img-${m.id}`} className="med-img-overlay" style={{ position:"absolute",inset:0,background:"rgba(0,0,0,.5)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",cursor:"pointer",opacity:0,color:"#fff",gap:4 }} onMouseEnter={e=>e.currentTarget.style.opacity="1"} onMouseLeave={e=>e.currentTarget.style.opacity="0"}><CameraIcon/><span style={{ fontSize:9,fontWeight:700 }}>{m.img?"Change":"Upload"}</span></label>
-                  <input id={`h-img-${m.id}`} type="file" accept="image/*" style={{ display:"none" }} onChange={e=>onUploadImg(m.id,e.target.files[0])}/>
-                  {m.img&&<button onClick={e=>{e.stopPropagation();onRemoveImg(m.id);}} style={{ position:"absolute",top:4,right:4,background:"rgba(239,68,68,.85)",border:"none",borderRadius:50,width:18,height:18,cursor:"pointer",color:"#fff",fontSize:9,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center" }}>✕</button>}
-                </>}
+                {isAdmin && (
+                  <>
+                    <label
+                      htmlFor={`h-img-${m.id}`}
+                      className="med-img-overlay"
+                      style={{ position:"absolute",inset:0,background:"rgba(0,0,0,.52)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",cursor:"pointer",opacity:0,color:"#fff",gap:5 }}
+                      onMouseEnter={e=>e.currentTarget.style.opacity="1"}
+                      onMouseLeave={e=>e.currentTarget.style.opacity="0"}
+                    >
+                      <CameraIcon/>
+                      <span style={{ fontSize:10,fontWeight:700 }}>{m.img?"Change Photo":"Upload Photo"}</span>
+                    </label>
+                    <input id={`h-img-${m.id}`} type="file" accept="image/*" style={{ display:"none" }} onChange={e=>onUploadImg(m.id,e.target.files[0])}/>
+                    {m.img && (
+                      <button
+                        onClick={e=>{ e.stopPropagation(); onRemoveImg(m.id); }}
+                        style={{ position:"absolute",top:6,right:6,background:"rgba(239,68,68,.9)",border:"none",borderRadius:6,cursor:"pointer",color:"#fff",fontSize:10,fontWeight:700,padding:"3px 7px",display:"none",alignItems:"center",gap:3 }}
+                        className="admin-del-btn"
+                      ><TrashIcon/> Remove</button>
+                    )}
+                  </>
+                )}
               </div>
               <div style={{ padding:"11px 14px 14px" }}>
                 <div style={{ display:"flex",justifyContent:"space-between",marginBottom:4 }}><span style={tag("g")}>{m.tag}</span><span style={{ fontSize:10,color:"var(--text2)" }}>{m.category}</span></div>
@@ -1018,7 +1784,7 @@ const HomePage = React.memo(function HomePage({ go, meds, services, testimonials
       </section>
 
       {/* Services */}
-      <section style={{ background:"var(--bg3)",padding:"clamp(36px,5vw,58px) 20px" }}>
+      <section style={{ background:"var(--bg3)",padding:"clamp(32px,5vw,56px) clamp(16px,4vw,20px)" }}>
         <div style={{ maxWidth:1200,margin:"0 auto" }}>
           <div style={{ textAlign:"center",marginBottom:32 }}><span style={bdg("b")}>Our Services</span><h2 style={{ fontSize:"clamp(18px,4vw,30px)",fontWeight:900 }}>What We Offer</h2></div>
           <div className="g3 card-grid">
@@ -1030,7 +1796,7 @@ const HomePage = React.memo(function HomePage({ go, meds, services, testimonials
       </section>
 
       {/* Why Choose */}
-      <section style={{ maxWidth:1200,margin:"0 auto",padding:"clamp(36px,5vw,58px) 20px" }}>
+      <section style={{ maxWidth:1200,margin:"0 auto",padding:"clamp(32px,5vw,56px) clamp(16px,4vw,20px)" }}>
         <div style={{ textAlign:"center",marginBottom:32 }}><span style={bdg("g")}>Why Us</span><h2 style={{ fontSize:"clamp(18px,4vw,30px)",fontWeight:900 }}>Why Choose TR Pharmacy?</h2></div>
         <div className="g4 card-grid">
           {[["💊","Genuine Medicines","All medicines sourced from certified manufacturers."],["💰","Affordable Prices","Best prices with regular discounts and offers."],["👨‍⚕️","Expert Pharmacist","Free consultation and medicine guidance."],["⚡","Fast Service","Quick dispensing and reliable home delivery."]].map(([ic,t,d])=>(
@@ -1040,7 +1806,7 @@ const HomePage = React.memo(function HomePage({ go, meds, services, testimonials
       </section>
 
       {/* Testimonials */}
-      <section style={{ background:"var(--bg3)",padding:"clamp(36px,5vw,58px) 20px" }}>
+      <section style={{ background:"var(--bg3)",padding:"clamp(32px,5vw,56px) clamp(16px,4vw,20px)" }}>
         <div style={{ maxWidth:1200,margin:"0 auto",textAlign:"center" }}>
           <span style={bdg("b")}>Reviews</span>
           <h2 style={{ fontSize:"clamp(18px,4vw,30px)",fontWeight:900,marginBottom:28 }}>What Customers Say</h2>
@@ -1061,7 +1827,7 @@ const HomePage = React.memo(function HomePage({ go, meds, services, testimonials
       </section>
 
       {/* FAQ */}
-      <section style={{ maxWidth:1200,margin:"0 auto",padding:"clamp(36px,5vw,58px) 20px" }}>
+      <section style={{ maxWidth:1200,margin:"0 auto",padding:"clamp(32px,5vw,56px) clamp(16px,4vw,20px)" }}>
         <div style={{ textAlign:"center",marginBottom:32 }}><span style={bdg("g")}>FAQ</span><h2 style={{ fontSize:"clamp(18px,4vw,30px)",fontWeight:900 }}>Frequently Asked Questions</h2></div>
         <div style={{ maxWidth:640,margin:"0 auto" }}>
           {faqs.map((f,i)=>(
@@ -1075,25 +1841,48 @@ const HomePage = React.memo(function HomePage({ go, meds, services, testimonials
         </div>
       </section>
 
-      {/* Newsletter */}
-      <div style={{ background:"linear-gradient(135deg,#059669,#0ea5e9)",padding:"48px 20px",textAlign:"center" }}>
-        <h2 style={{ color:"#fff",fontSize:22,fontWeight:900,marginBottom:6 }}>Get Health Tips & Exclusive Offers</h2>
-        <p style={{ color:"rgba(255,255,255,.8)",marginBottom:20,fontSize:13 }}>Subscribe for medicine reminders and special deals</p>
-        <div style={{ display:"flex",gap:8,maxWidth:360,margin:"0 auto",flexWrap:"wrap",justifyContent:"center" }}>
-          <input style={{ flex:1,minWidth:180,padding:"10px 13px",borderRadius:10,border:"1px solid rgba(255,255,255,.4)",background:"rgba(255,255,255,.2)",color:"#fff",fontSize:13,outline:"none",boxSizing:"border-box" }} placeholder="Your phone number" value={nl} onChange={e=>setNl(e.target.value)}/>
-          <button style={{ ...btn(),background:"#fff",color:"#059669" }} className="hbtn" onClick={()=>{if(nl){onToast("Subscribed! 🎉");setNl("");}}}> Subscribe</button>
-        </div>
-      </div>
+      {/* Membership CTA — shows card if subscribed, plans if not */}
+      {(() => {
+        const sub = lsGet("trp_subscription", null);
+        return sub ? (
+          <section style={{ maxWidth:640,margin:"0 auto",padding:"clamp(24px,4vw,48px) clamp(14px,4vw,20px)" }}>
+            <div style={{ textAlign:"center",marginBottom:16 }}>
+              <span style={bdg("g")}>Your Membership</span>
+              <h2 style={{ fontSize:"clamp(18px,4vw,28px)",fontWeight:900 }}>Welcome, Member! 💎</h2>
+            </div>
+            <MembershipCard onSubOpen={onSubOpen}/>
+          </section>
+        ) : (
+          <div style={{ background:"linear-gradient(135deg,#064e3b,#059669,#0ea5e9)",padding:"clamp(36px,5vw,52px) 20px",textAlign:"center",position:"relative",overflow:"hidden" }}>
+            <div style={{ position:"absolute",inset:0,opacity:.06,backgroundImage:"radial-gradient(#fff 1px,transparent 1px)",backgroundSize:"30px 30px" }}/>
+            <div style={{ position:"relative" }}>
+              <div style={{ fontSize:36,marginBottom:10 }}>💎</div>
+              <h2 style={{ color:"#fff",fontSize:"clamp(18px,4vw,24px)",fontWeight:900,marginBottom:8 }}>Join TR Pharmacy Membership</h2>
+              <p style={{ color:"rgba(255,255,255,.82)",marginBottom:20,fontSize:13,maxWidth:480,margin:"0 auto 20px" }}>
+                Hover over a plan to see details, then click Join Now!
+              </p>
+              <div style={{ display:"flex",gap:14,justifyContent:"center",flexWrap:"wrap",marginBottom:22,maxWidth:700,margin:"0 auto 22px",position:"relative" }}>
+                {PLANS.map(plan=><PlanHoverCard key={plan.id} plan={plan} onSubOpen={onSubOpen}/>)}
+              </div>
+              <button style={{ ...btn(),background:"#fff",color:"#059669",padding:"12px 32px",fontSize:14,fontWeight:900,boxShadow:"0 4px 20px rgba(0,0,0,.2)" }} className="hbtn" onClick={onSubOpen}>
+                💎 View All Plans & Subscribe
+              </button>
+              <p style={{ color:"rgba(255,255,255,.5)",fontSize:11,marginTop:10 }}>Cancel anytime · No hidden charges</p>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 });
 
-const AboutPage = React.memo(function AboutPage({ go, contact }) {
+const AboutPage = React.memo(function AboutPage({ go, contact: contactProp }) {
+  const contact = contactProp || DEFAULT_CONTACT;
   const card=mkCard(); const btn=mkBtn; const bdg=mkBdg;
   return (
     <div className="pg">
       <div style={mkHero("#064e3b","#065f46")}><h1 style={{ color:"#fff",fontSize:"clamp(24px,5vw,40px)",fontWeight:900,marginBottom:8 }}>About TR Pharmacy</h1><p style={{ color:"#a7f3d0",fontSize:15 }}>Trusted Healthcare Partner in Jankipuram, Lucknow</p></div>
-      <section style={{ maxWidth:1200,margin:"0 auto",padding:"clamp(36px,5vw,58px) 20px" }}>
+      <section style={{ maxWidth:1200,margin:"0 auto",padding:"clamp(32px,5vw,56px) clamp(16px,4vw,20px)" }}>
         <div className="hg" style={{ alignItems:"start" }}>
           <div>
             <span style={bdg("g")}>Our Story</span>
@@ -1109,7 +1898,7 @@ const AboutPage = React.memo(function AboutPage({ go, contact }) {
           </div>
         </div>
       </section>
-      <section style={{ background:"var(--bg3)",padding:"clamp(36px,5vw,58px) 20px" }}>
+      <section style={{ background:"var(--bg3)",padding:"clamp(32px,5vw,56px) clamp(16px,4vw,20px)" }}>
         <div style={{ maxWidth:1200,margin:"0 auto",textAlign:"center" }}>
           <h2 style={{ fontSize:24,fontWeight:900,marginBottom:28 }}>Our Commitments</h2>
           <div className="g4 card-grid">
@@ -1119,14 +1908,14 @@ const AboutPage = React.memo(function AboutPage({ go, contact }) {
           </div>
         </div>
       </section>
-      <section style={{ maxWidth:1200,margin:"0 auto",padding:"clamp(36px,5vw,58px) 20px" }}>
+      <section style={{ maxWidth:1200,margin:"0 auto",padding:"clamp(32px,5vw,56px) clamp(16px,4vw,20px)" }}>
         <div style={{ ...card,background:"linear-gradient(135deg,#d1fae5,#e0f2fe)",border:"none",padding:32,textAlign:"center" }}>
           <div style={{ fontSize:44,marginBottom:10 }}>📍</div>
           <h3 style={{ fontSize:18,fontWeight:900,marginBottom:6 }}>Find Us</h3>
-          <p style={{ color:"var(--text2)",marginBottom:16,fontSize:13 }}>{contact.address}</p>
+          <p style={{ color:"var(--text2)",marginBottom:16,fontSize:13 }}>{(contact?.address || 'Shop No. 7, Janki Plaza, Jankipuram, Lucknow')}</p>
           <div style={{ display:"flex",gap:9,justifyContent:"center",flexWrap:"wrap" }}>
-            <a href={`tel:${contact.phone1}`} style={{ ...btn(),textDecoration:"none" }}>📞 {contact.phone1}</a>
-            <a href={`tel:${contact.phone2}`} style={{ ...btn(),background:"#0ea5e9",textDecoration:"none" }}>📞 {contact.phone2}</a>
+            <a href={`tel:${contact?.phone1 || '6389482072'}`} style={{ ...btn(),textDecoration:"none" }}>📞 {(contact?.phone1 || '6389482072')}</a>
+            <a href={`tel:${contact?.phone2 || '8586098544'}`} style={{ ...btn(),background:"#0ea5e9",textDecoration:"none" }}>📞 {(contact?.phone2 || '8586098544')}</a>
             <a href={MAPS_URL} target="_blank" rel="noreferrer" style={{ ...btn("out"),textDecoration:"none" }}>🗺️ Get Directions</a>
           </div>
         </div>
@@ -1136,6 +1925,7 @@ const AboutPage = React.memo(function AboutPage({ go, contact }) {
 });
 
 const MedicinesPage = React.memo(function MedicinesPage({ go, meds, onAddCart, onUploadImg, onRemoveImg, onAdminOpen, isAdmin }) {
+  useReveal();
   const [search, setSearch]     = useState("");
   const [catFilter, setCatFilter] = useState("All");
   const card=mkCard(); const btn=mkBtn; const tag=mkTag;
@@ -1178,7 +1968,13 @@ const MedicinesPage = React.memo(function MedicinesPage({ go, meds, onAddCart, o
                   {isAdmin && <>
                     <label htmlFor={`mi-${m.id}`} className="med-img-overlay" style={{ position:"absolute",inset:0,background:"rgba(0,0,0,.5)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",cursor:"pointer",opacity:0,color:"#fff",gap:4 }} onMouseEnter={e=>e.currentTarget.style.opacity="1"} onMouseLeave={e=>e.currentTarget.style.opacity="0"}><CameraIcon/><span style={{ fontSize:9,fontWeight:700 }}>{m.img?"Change":"Upload"}</span></label>
                     <input id={`mi-${m.id}`} type="file" accept="image/*" style={{ display:"none" }} onChange={e=>onUploadImg(m.id,e.target.files[0])}/>
-                    {m.img&&<button onClick={e=>{e.stopPropagation();onRemoveImg(m.id);}} style={{ position:"absolute",top:5,right:5,background:"rgba(239,68,68,.85)",border:"none",borderRadius:50,width:19,height:19,cursor:"pointer",color:"#fff",fontSize:10,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center" }}>✕</button>}
+                    {m.img && (
+                      <button
+                        onClick={e=>{ e.stopPropagation(); onRemoveImg(m.id); }}
+                        style={{ position:"absolute",top:6,right:6,background:"rgba(239,68,68,.9)",border:"none",borderRadius:6,cursor:"pointer",color:"#fff",fontSize:10,fontWeight:700,padding:"3px 7px",display:"none",alignItems:"center",gap:3 }}
+                        className="admin-del-btn"
+                      ><TrashIcon/> Remove</button>
+                    )}
                   </>}
                 </div>
                 <div style={{ padding:"12px 14px 14px" }}>
@@ -1204,17 +2000,71 @@ const MedicinesPage = React.memo(function MedicinesPage({ go, meds, onAddCart, o
 });
 
 const PrescriptionPage = React.memo(function PrescriptionPage({ go, onToast }) {
-  const [form, setForm] = useState({ name:"",phone:"",address:"",medicine:"",note:"",file:null,preview:null });
-  const [done, setDone] = useState(false);
+  // Load saved draft from localStorage so refresh doesn't erase it
+  const [form, setForm] = useState(() => {
+    const saved = lsGet("trp_rx_draft", null);
+    return (saved && typeof saved === "object" && saved.phone !== undefined)
+      ? saved
+      : { name:"",phone:"",address:"",medicine:"",note:"",file:null,preview:null };
+  });
+  // Check if already submitted (persisted)
+  const [done, setDone] = useState(() => lsGet("trp_rx_submitted", false));
+  const [dupWarn, setDupWarn] = useState(false);
   const card=mkCard(); const btn=mkBtn; const inp=mkInp();
-  const upd = useCallback((k,v)=>setForm(p=>({...p,[k]:v})),[]);
-  const handleFile = useCallback(file=>{ if(!file)return; const r=new FileReader(); r.onload=e=>setForm(p=>({...p,file,preview:e.target.result})); r.readAsDataURL(file); },[]);
-  const submit = useCallback(()=>{
-    if(!form.name||!form.phone){onToast("Please fill Name and Phone","err");return;}
-    DB.prescriptions.push({...form,time:new Date().toLocaleString("en-IN")});
-    setDone(true); onToast("Prescription submitted! We'll call soon. ✅");
-  },[form,onToast]);
-  if(done) return <div style={{ textAlign:"center",padding:"80px 20px" }} className="pg"><div style={{ fontSize:64,marginBottom:16 }}>✅</div><h2 style={{ fontSize:24,fontWeight:900,marginBottom:8 }}>Prescription Submitted!</h2><p style={{ color:"var(--text2)",maxWidth:360,margin:"0 auto 20px",lineHeight:1.7,fontSize:13 }}>Our pharmacist will review and call you within 30 minutes.</p><div style={{ display:"flex",gap:9,justifyContent:"center",flexWrap:"wrap" }}><button style={btn()} onClick={()=>go("home")}>Back to Home</button><button style={btn("out")} onClick={()=>{setDone(false);setForm({name:"",phone:"",address:"",medicine:"",note:"",file:null,preview:null});}}>Submit Another</button></div></div>;
+
+  // Save form draft to localStorage on every change
+  const upd = useCallback((k,v) => {
+    setForm(p => {
+      const next = {...p, [k]:v};
+      lsSet("trp_rx_draft", {...next, file:null}); // file can't serialize, save rest
+      return next;
+    });
+  }, []);
+
+  const handleFile = useCallback(file => {
+    if (!file) return;
+    const r = new FileReader();
+    r.onload = e => {
+      setForm(p => {
+        const next = {...p, file, preview:e.target.result};
+        lsSet("trp_rx_draft", {...next, file:null}); // save preview (base64) but not File obj
+        return next;
+      });
+    };
+    r.readAsDataURL(file);
+  }, []);
+
+  const submit = useCallback(() => {
+    if (!form.name || !form.phone) { onToast("Please fill Name and Phone","err"); return; }
+    // Duplicate check — same phone already submitted
+    const already = DB.prescriptions.find(p => p.phone === form.phone.trim());
+    if (already) { setDupWarn(true); return; }
+    DB.prescriptions.push({...form, time:new Date().toLocaleString("en-IN")});
+    lsSet("trp_rx_submitted", true);
+    lsSet("trp_rx_draft", null);
+    setDone(true);
+    onToast("Prescription submitted! We'll call soon. ✅");
+  }, [form, onToast]);
+
+  const submitAnother = useCallback(() => {
+    setDone(false);
+    setDupWarn(false);
+    lsSet("trp_rx_submitted", false);
+    lsSet("trp_rx_draft", null);
+    setForm({ name:"",phone:"",address:"",medicine:"",note:"",file:null,preview:null });
+  }, []);
+
+  if (done) return (
+    <div style={{ textAlign:"center",padding:"80px 20px" }} className="pg">
+      <div style={{ fontSize:64,marginBottom:16 }}>✅</div>
+      <h2 style={{ fontSize:24,fontWeight:900,marginBottom:8 }}>Prescription Submitted!</h2>
+      <p style={{ color:"var(--text2)",maxWidth:360,margin:"0 auto 20px",lineHeight:1.7,fontSize:13 }}>Our pharmacist will review and call you within 30 minutes.</p>
+      <div style={{ display:"flex",gap:9,justifyContent:"center",flexWrap:"wrap" }}>
+        <button style={btn()} onClick={()=>go("home")}>Back to Home</button>
+        <button style={btn("out")} onClick={submitAnother}>Submit Another</button>
+      </div>
+    </div>
+  );
   return (
     <div className="pg">
       <div style={mkHero("#064e3b","#0c4a6e")}><h1 style={{ color:"#fff",fontSize:"clamp(24px,5vw,40px)",fontWeight:900,marginBottom:8 }}>Upload Prescription</h1><p style={{ color:"#a7f3d0",fontSize:14 }}>Send your prescription and we'll prepare your medicines</p></div>
@@ -1233,6 +2083,19 @@ const PrescriptionPage = React.memo(function PrescriptionPage({ go, onToast }) {
               </div>
             </div>
             <div><label style={{ fontWeight:700,fontSize:11,marginBottom:4,display:"block" }}>Additional Note</label><textarea style={{ ...inp,height:78,resize:"vertical" }} placeholder="Special instructions..." value={form.note} onChange={e=>upd("note",e.target.value)}/></div>
+            {/* Duplicate warning */}
+            {dupWarn && (
+              <div style={{ background:"#fef3c7",border:"1.5px solid #f59e0b",borderRadius:12,padding:"14px 16px",animation:"popIn .3s ease" }}>
+                <div style={{ fontWeight:800,fontSize:13,color:"#92400e",marginBottom:4 }}>⚠️ Already Submitted</div>
+                <p style={{ fontSize:12,color:"#78350f",lineHeight:1.6 }}>
+                  A prescription with phone <b>{form.phone}</b> has already been submitted. Our team will contact you soon.
+                </p>
+                <div style={{ display:"flex",gap:8,marginTop:10,flexWrap:"wrap" }}>
+                  <button style={{ ...btn(),fontSize:12,padding:"7px 14px" }} onClick={()=>{ setDupWarn(false); submitAnother(); }}>Submit as New</button>
+                  <button style={{ ...btn("ghost"),fontSize:12,padding:"7px 14px",border:"1px solid var(--bdr)" }} onClick={()=>go("home")}>Go to Home</button>
+                </div>
+              </div>
+            )}
             <button style={{ ...btn(),padding:"12px",fontSize:14,justifyContent:"center",width:"100%" }} className="hbtn" onClick={submit}>📤 Submit Prescription</button>
           </div>
         </div>
@@ -1254,7 +2117,7 @@ const ServicesPage = React.memo(function ServicesPage({ go, services, onAdminOpe
   return (
     <div className="pg">
       <div style={mkHero("#0c4a6e","#064e3b")}><h1 style={{ color:"#fff",fontSize:"clamp(24px,5vw,40px)",fontWeight:900,marginBottom:8 }}>Our Services</h1><p style={{ color:"#a7f3d0",fontSize:14 }}>Complete healthcare solutions for you and your family</p></div>
-      <section style={{ maxWidth:1200,margin:"0 auto",padding:"clamp(32px,5vw,54px) 20px" }}>
+      <section style={{ maxWidth:1200,margin:"0 auto",padding:"clamp(28px,5vw,52px) clamp(14px,4vw,20px)" }}>
         {isAdmin && (
           <div style={{ textAlign:"right",marginBottom:20 }}>
             <button style={{ ...btn(),fontSize:12,padding:"7px 16px" }} className="hbtn" onClick={onAdminOpen}>⚙️ Add / Edit Services</button>
@@ -1284,21 +2147,46 @@ const ServicesPage = React.memo(function ServicesPage({ go, services, onAdminOpe
   );
 });
 
-const ContactPage = React.memo(function ContactPage({ onToast, contact, onAdminOpen, isAdmin }) {
-  const [form, setForm] = useState({ name:"",email:"",phone:"",msg:"" });
-  const [done, setDone] = useState(false);
+const ContactPage = React.memo(function ContactPage({ onToast, contact: contactProp, onAdminOpen, isAdmin }) {
+  const contact = contactProp || DEFAULT_CONTACT;
+  // Load saved draft so refresh doesn't erase
+  const [form, setForm] = useState(() => { const d = lsGet("trp_ct_draft", null); return (d && typeof d === "object") ? d : { name:"",email:"",phone:"",msg:"" }; });
+  const [done, setDone] = useState(() => lsGet("trp_ct_submitted", false));
+  const [dupWarn, setDupWarn] = useState(false);
   const card=mkCard(); const btn=mkBtn; const inp=mkInp();
-  const upd = useCallback((k,v)=>setForm(p=>({...p,[k]:v})),[]);
-  const send = useCallback(()=>{
-    if(!form.name||!form.phone){onToast("Fill Name and Phone","err");return;}
-    if(!form.msg){onToast("Write a message","err");return;}
-    DB.contacts.push({...form,time:new Date().toLocaleString("en-IN")});
-    setDone(true); onToast("Message sent! ✅");
-  },[form,onToast]);
+
+  const upd = useCallback((k,v) => {
+    setForm(p => {
+      const next = {...p, [k]:v};
+      lsSet("trp_ct_draft", next);
+      return next;
+    });
+  }, []);
+
+  const send = useCallback(() => {
+    if (!form.name || !form.phone) { onToast("Fill Name and Phone","err"); return; }
+    if (!form.msg) { onToast("Write a message","err"); return; }
+    // Duplicate check — same phone already messaged
+    const already = DB.contacts.find(c => c.phone === form.phone.trim());
+    if (already) { setDupWarn(true); return; }
+    DB.contacts.push({...form, time:new Date().toLocaleString("en-IN")});
+    lsSet("trp_ct_submitted", true);
+    lsSet("trp_ct_draft", null);
+    setDone(true);
+    onToast("Message sent! ✅");
+  }, [form, onToast]);
+
+  const sendAnother = useCallback(() => {
+    setDone(false);
+    setDupWarn(false);
+    lsSet("trp_ct_submitted", false);
+    lsSet("trp_ct_draft", null);
+    setForm({ name:"",email:"",phone:"",msg:"" });
+  }, []);
   return (
     <div className="pg">
       <div style={mkHero("#064e3b","#0c4a6e")}><h1 style={{ color:"#fff",fontSize:"clamp(24px,5vw,40px)",fontWeight:900,marginBottom:8 }}>Contact Us</h1><p style={{ color:"#a7f3d0",fontSize:14 }}>We're here for all your healthcare needs</p></div>
-      <section style={{ maxWidth:1200,margin:"0 auto",padding:"clamp(32px,5vw,54px) 20px" }}>
+      <section style={{ maxWidth:1200,margin:"0 auto",padding:"clamp(28px,5vw,52px) clamp(14px,4vw,20px)" }}>
         {isAdmin && (
           <div style={{ textAlign:"right",marginBottom:16 }}>
             <button style={{ ...btn("ghost"),fontSize:12,padding:"6px 14px",border:"1px solid var(--bdr)" }} className="hbtn" onClick={onAdminOpen}>⚙️ Edit Contact Details</button>
@@ -1307,7 +2195,7 @@ const ContactPage = React.memo(function ContactPage({ onToast, contact, onAdminO
         <div className="cg">
           <div>
             <h3 style={{ fontSize:17,fontWeight:900,marginBottom:16 }}>Get In Touch</h3>
-            {[["📍","Address",contact.address,MAPS_URL],["📞","Phone Numbers",`${contact.phone1}  |  ${contact.phone2}`,`tel:${contact.phone1}`],["🕐","Working Hours",contact.hours,null],["💬","WhatsApp","Chat for quick queries","https://wa.me/916389482072"]].map(([ic,t,i,l])=>(
+            {[["📍","Address",(contact?.address || 'Shop No. 7, Janki Plaza, Jankipuram, Lucknow'),MAPS_URL],["📞","Phone Numbers",`${contact?.phone1 || '6389482072'}  |  ${contact?.phone2 || '8586098544'}`,`tel:${contact?.phone1 || '6389482072'}`],["🕐","Working Hours",(contact?.hours || 'Mon-Sat: 9AM-9PM'),null],["💬","WhatsApp","Chat for quick queries","https://wa.me/916389482072"]].map(([ic,t,i,l])=>(
               <div key={t} style={{ ...card,display:"flex",gap:11,marginBottom:10,cursor:l?"pointer":"default",transition:"all .2s" }} className={l?"lift":""} onClick={()=>l&&window.open(l,l.startsWith("tel")?"_self":"_blank")}>
                 <div style={{ fontSize:22,flexShrink:0 }}>{ic}</div>
                 <div><div style={{ fontWeight:800,marginBottom:2,fontSize:13 }}>{t}</div><div style={{ color:l?"#059669":"var(--text2)",fontSize:12,fontWeight:l?600:400 }}>{i}</div>{l&&<div style={{ fontSize:10,color:"var(--text2)",marginTop:1 }}>Click to open →</div>}</div>
@@ -1321,18 +2209,36 @@ const ContactPage = React.memo(function ContactPage({ onToast, contact, onAdminO
           <div>
             <h3 style={{ fontSize:17,fontWeight:900,marginBottom:16 }}>Send a Message</h3>
             {done
-              ?<div style={{ ...card,textAlign:"center",padding:40 }}><div style={{ fontSize:52,marginBottom:12 }}>✅</div><h3 style={{ fontWeight:900,marginBottom:6,fontSize:16 }}>Message Received!</h3><p style={{ color:"var(--text2)",marginBottom:16,fontSize:13 }}>We'll call you back on <b>{form.phone}</b>.</p><button style={btn("out")} onClick={()=>{setDone(false);setForm({name:"",email:"",phone:"",msg:""});}}>Send Another</button></div>
-              :<div style={card}>
-                <div style={{ display:"flex",flexDirection:"column",gap:13 }}>
-                  {[["Your Name *","name","text"],["Email Address","email","email"],["Phone Number *","phone","tel"]].map(([l,k,t])=>(
-                    <div key={k}><label style={{ fontWeight:700,fontSize:11,marginBottom:4,display:"block" }}>{l}</label><input style={inp} type={t} placeholder={l.replace(" *","")} value={form[k]} onChange={e=>upd(k,e.target.value)}/></div>
-                  ))}
-                  <div><label style={{ fontWeight:700,fontSize:11,marginBottom:4,display:"block" }}>Message *</label><textarea style={{ ...inp,height:95,resize:"vertical" }} placeholder="How can we help?" value={form.msg} onChange={e=>upd("msg",e.target.value)}/></div>
-                  <button style={{ ...btn(),padding:"12px",fontSize:14,justifyContent:"center" }} className="hbtn" onClick={send}>📤 Send Message</button>
+              ? <div style={{ ...card,textAlign:"center",padding:40 }}>
+                  <div style={{ fontSize:52,marginBottom:12 }}>✅</div>
+                  <h3 style={{ fontWeight:900,marginBottom:6,fontSize:16 }}>Message Received!</h3>
+                  <p style={{ color:"var(--text2)",marginBottom:16,fontSize:13 }}>We'll call you back on <b>{form.phone}</b>.</p>
+                  <button style={btn("out")} onClick={sendAnother}>Send Another Message</button>
                 </div>
-              </div>
+              : <div style={card}>
+                  <div style={{ display:"flex",flexDirection:"column",gap:13 }}>
+                    {[["Your Name *","name","text"],["Email Address","email","email"],["Phone Number *","phone","tel"]].map(([l,k,t])=>(
+                      <div key={k}><label style={{ fontWeight:700,fontSize:11,marginBottom:4,display:"block" }}>{l}</label><input style={inp} type={t} placeholder={l.replace(" *","")} value={form[k]} onChange={e=>upd(k,e.target.value)}/></div>
+                    ))}
+                    <div><label style={{ fontWeight:700,fontSize:11,marginBottom:4,display:"block" }}>Message *</label><textarea style={{ ...inp,height:95,resize:"vertical" }} placeholder="How can we help?" value={form.msg} onChange={e=>upd("msg",e.target.value)}/></div>
+                    {/* Duplicate warning */}
+                    {dupWarn && (
+                      <div style={{ background:"#fef3c7",border:"1.5px solid #f59e0b",borderRadius:12,padding:"14px 16px",animation:"popIn .3s ease" }}>
+                        <div style={{ fontWeight:800,fontSize:13,color:"#92400e",marginBottom:4 }}>⚠️ Already Submitted</div>
+                        <p style={{ fontSize:12,color:"#78350f",lineHeight:1.6 }}>
+                          A message from <b>{form.phone}</b> is already saved. Our team will contact you soon.
+                        </p>
+                        <div style={{ display:"flex",gap:8,marginTop:10,flexWrap:"wrap" }}>
+                          <button style={{ ...btn(),fontSize:12,padding:"7px 14px" }} onClick={()=>{ setDupWarn(false); sendAnother(); }}>Send as New</button>
+                          <a href={`https://wa.me/91${contact?.phone1 || '6389482072'}`} target="_blank" rel="noreferrer" style={{ ...btn("wa"),textDecoration:"none",fontSize:12,padding:"7px 14px" }}>💬 WhatsApp Us</a>
+                        </div>
+                      </div>
+                    )}
+                    <button style={{ ...btn(),padding:"12px",fontSize:14,justifyContent:"center" }} className="hbtn" onClick={send}>📤 Send Message</button>
+                  </div>
+                </div>
             }
-            <a href={`https://wa.me/91${contact.phone1}?text=Hello%20TR%20Pharmacy%2C%20I%20need%20help`} target="_blank" rel="noreferrer" style={{ display:"flex",alignItems:"center",gap:11,padding:"15px 16px",background:"#dcfce7",borderRadius:13,marginTop:12,textDecoration:"none",border:"1.5px solid #bbf7d0" }} className="lift">
+            <a href={`https://wa.me/91${contact?.phone1 || '6389482072'}?text=Hello%20TR%20Pharmacy%2C%20I%20need%20help`} target="_blank" rel="noreferrer" style={{ display:"flex",alignItems:"center",gap:11,padding:"15px 16px",background:"#dcfce7",borderRadius:13,marginTop:12,textDecoration:"none",border:"1.5px solid #bbf7d0" }} className="lift">
               <div style={{ width:40,height:40,borderRadius:11,background:"#25d366",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0 }}><WAIcon/></div>
               <div><div style={{ fontWeight:900,color:"#166534",fontSize:13 }}>Chat on WhatsApp</div><div style={{ fontSize:11,color:"#15803d" }}>Quick replies available</div></div>
               <span style={{ marginLeft:"auto",fontSize:16,color:"#15803d" }}>→</span>
@@ -1344,7 +2250,8 @@ const ContactPage = React.memo(function ContactPage({ onToast, contact, onAdminO
   );
 });
 
-const OpeningPage = React.memo(function OpeningPage({ contact, isAdmin }) {
+const OpeningPage = React.memo(function OpeningPage({ contact: contactProp, isAdmin }) {
+  const contact = contactProp || DEFAULT_CONTACT;
   const [bannerVisible, setBannerVisible] = useState(()=>lsGet("trp_banner",true));
   const [photos, setPhotos] = useState(()=>lsGet("trp_opening_photos",[]));
   const [lightbox, setLightbox] = useState(null);
@@ -1410,13 +2317,13 @@ const OpeningPage = React.memo(function OpeningPage({ contact, isAdmin }) {
         <div className="hg" style={{ gap:14,marginTop:20 }}>
           <div style={{ ...card,background:"#059669",color:"#fff",textAlign:"center",padding:24 }}>
             <div style={{ fontSize:34,marginBottom:8 }}>📍</div><h3 style={{ fontWeight:900,fontSize:14,marginBottom:6 }}>Our Location</h3>
-            <p style={{ opacity:.88,fontSize:12,marginBottom:12,lineHeight:1.6 }}>{contact.address}</p>
+            <p style={{ opacity:.88,fontSize:12,marginBottom:12,lineHeight:1.6 }}>{(contact?.address || 'Shop No. 7, Janki Plaza, Jankipuram, Lucknow')}</p>
             <a href={MAPS_URL} target="_blank" rel="noreferrer" style={{ ...btn(),background:"#fff",color:"#059669",textDecoration:"none",justifyContent:"center" }}>🗺️ Get Directions</a>
           </div>
           <div style={{ ...card,background:"#0c4a6e",color:"#fff",textAlign:"center",padding:24 }}>
             <div style={{ fontSize:34,marginBottom:8 }}>📞</div><h3 style={{ fontWeight:900,fontSize:14,marginBottom:6 }}>Call / Visit Us</h3>
-            <p style={{ opacity:.88,fontSize:12,marginBottom:12 }}>{contact.phone1}<br/>{contact.phone2}</p>
-            <a href={`https://wa.me/91${contact.phone1}`} target="_blank" rel="noreferrer" style={{ ...btn("wa"),textDecoration:"none",justifyContent:"center" }}>💬 WhatsApp</a>
+            <p style={{ opacity:.88,fontSize:12,marginBottom:12 }}>{(contact?.phone1 || '6389482072')}<br/>{(contact?.phone2 || '8586098544')}</p>
+            <a href={`https://wa.me/91${contact?.phone1 || '6389482072'}`} target="_blank" rel="noreferrer" style={{ ...btn("wa"),textDecoration:"none",justifyContent:"center" }}>💬 WhatsApp</a>
           </div>
         </div>
       </section>
@@ -1438,7 +2345,595 @@ const OpeningPage = React.memo(function OpeningPage({ contact, isAdmin }) {
   );
 });
 
-const Footer = React.memo(function Footer({ go, services, contact }) {
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  MEMBERSHIP CARD  (shown on homepage after subscription — replaces CTA)
+// ─────────────────────────────────────────────────────────────────────────────
+const MembershipCard = React.memo(function MembershipCard({ onSubOpen }) {
+  const sub = lsGet("trp_subscription", null);
+  const plan = PLANS.find(p => p.id === sub?.plan) || PLANS[0];
+  const btn = mkBtn;
+  const card = mkCard();
+  return (
+    <div style={{ background:`linear-gradient(135deg,${plan.color}22,${plan.color}11)`, border:`2px solid ${plan.color}44`, borderRadius:20, padding:"28px 24px", textAlign:"center", position:"relative", overflow:"hidden" }}>
+      <div style={{ position:"absolute",top:-20,right:-20,fontSize:80,opacity:.08 }}>{plan.icon}</div>
+      <div style={{ position:"relative" }}>
+        <div style={{ fontSize:40,marginBottom:8 }}>{plan.icon}</div>
+        <div style={{ fontSize:11,fontWeight:700,color:plan.color,textTransform:"uppercase",letterSpacing:1,marginBottom:4 }}>Active Membership</div>
+        <h3 style={{ fontSize:22,fontWeight:900,marginBottom:4 }}>{plan.label} Plan</h3>
+        <p style={{ fontSize:12,color:"var(--text2)",marginBottom:16 }}>Member since {sub?.startDate} · {plan.price===0?"Free":"₹"+plan.price+"/month"}</p>
+        <div style={{ display:"flex",flexDirection:"column",gap:5,maxWidth:280,margin:"0 auto 20px",textAlign:"left" }}>
+          {plan.features.slice(0,4).map(f=>(
+            <div key={f} style={{ display:"flex",gap:8,fontSize:12 }}><span style={{ color:plan.color,fontWeight:800 }}>✓</span><span>{f}</span></div>
+          ))}
+        </div>
+        <button style={{ ...btn(),background:plan.color,fontSize:13,padding:"10px 24px" }} className="hbtn" onClick={onSubOpen}>
+          ⬆️ Upgrade Plan
+        </button>
+      </div>
+    </div>
+  );
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  PLAN HOVER POPUP  (on membership CTA cards)
+// ─────────────────────────────────────────────────────────────────────────────
+const PlanHoverCard = React.memo(function PlanHoverCard({ plan, onSubOpen }) {
+  const [show, setShow] = React.useState(false);
+  const btn = mkBtn;
+  const card = mkCard();
+  return (
+    <div style={{ position:"relative",flex:1,minWidth:100 }}
+      onMouseEnter={()=>setShow(true)} onMouseLeave={()=>setShow(false)}
+      onTouchStart={()=>setShow(s=>!s)}>
+      <div style={{ background:"rgba(255,255,255,.13)",borderRadius:14,padding:"14px 16px",textAlign:"center",cursor:"pointer",transition:"transform .2s,background .2s",transform:show?"scale(1.05)":"scale(1)",background:show?"rgba(255,255,255,.22)":"rgba(255,255,255,.13)" }}>
+        <div style={{ fontSize:24,marginBottom:5 }}>{plan.icon}</div>
+        <div style={{ color:"#fff",fontWeight:900,fontSize:15 }}>{plan.price===0?"Free":"₹"+plan.price+"/mo"}</div>
+        <div style={{ color:"rgba(255,255,255,.7)",fontSize:11 }}>{plan.label}</div>
+        <div style={{ color:"rgba(255,255,255,.5)",fontSize:10,marginTop:3 }}>Hover to see details</div>
+      </div>
+      {show && (
+        <div style={{ ...card,position:"absolute",bottom:"calc(100% + 12px)",left:"50%",transform:"translateX(-50%)",width:220,zIndex:50,animation:"popIn .22s cubic-bezier(.22,1,.36,1)",padding:16,boxShadow:"0 12px 40px rgba(0,0,0,.25)" }}>
+          <div style={{ fontWeight:900,fontSize:14,marginBottom:8,display:"flex",alignItems:"center",gap:7 }}>{plan.icon} {plan.label} {plan.price>0&&<span style={{ fontSize:12,color:"#059669",fontWeight:700 }}>₹{plan.price}/mo</span>}</div>
+          {plan.features.slice(0,5).map(f=>(
+            <div key={f} style={{ display:"flex",gap:6,fontSize:11,marginBottom:4 }}><span style={{ color:"#059669",fontWeight:800 }}>✓</span><span>{f}</span></div>
+          ))}
+          <button style={{ ...btn(),width:"100%",padding:"9px",marginTop:10,justifyContent:"center",fontSize:12 }} className="hbtn" onClick={onSubOpen}>
+            Join Now →
+          </button>
+          {/* Arrow */}
+          <div style={{ position:"absolute",bottom:-7,left:"50%",transform:"translateX(-50%)",width:14,height:14,background:"var(--bg2)",border:"1px solid var(--bdr)",borderTop:"none",borderLeft:"none",transform:"translateX(-50%) rotate(45deg)" }}/>
+        </div>
+      )}
+    </div>
+  );
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  PAGE: BLOG
+// ─────────────────────────────────────────────────────────────────────────────
+const BlogPage = React.memo(function BlogPage({ go, blogs, isAdmin, onAdminOpen, onToast }) {
+  useReveal();
+  const [selected, setSelected] = React.useState(null);
+  const card = mkCard(); const btn = mkBtn; const bdg = mkBdg;
+  const cats = ["All",...[...new Set(blogs.map(b=>b.category))]];
+  const [cat, setCat] = React.useState("All");
+  const filtered = cat==="All" ? blogs : blogs.filter(b=>b.category===cat);
+
+  if (selected) return (
+    <div className="pg">
+      <div style={{ background:"linear-gradient(135deg,#1e293b,#0f172a)",padding:"clamp(36px,6vw,56px) 20px",position:"relative",overflow:"hidden" }}>
+        <div style={{ position:"absolute",inset:0,opacity:.04,backgroundImage:"radial-gradient(#fff 1px,transparent 1px)",backgroundSize:"32px 32px" }}/>
+        <div style={{ maxWidth:760,margin:"0 auto",position:"relative" }}>
+          <button onClick={()=>setSelected(null)} style={{ ...btn("ghost"),fontSize:12,marginBottom:16,border:"1px solid rgba(255,255,255,.2)",color:"#94a3b8" }}>← Back to Blog</button>
+          <div style={{ display:"flex",gap:10,marginBottom:14,flexWrap:"wrap" }}>
+            <span style={{ background:"rgba(5,150,105,.25)",color:"#4ade80",borderRadius:50,padding:"3px 12px",fontSize:11,fontWeight:700 }}>{selected.tag}</span>
+            <span style={{ color:"rgba(255,255,255,.5)",fontSize:12 }}>{selected.date} · {selected.author}</span>
+          </div>
+          <h1 style={{ color:"#fff",fontSize:"clamp(22px,4vw,36px)",fontWeight:900,lineHeight:1.2 }}>{selected.title}</h1>
+        </div>
+      </div>
+      <section style={{ maxWidth:760,margin:"0 auto",padding:"clamp(24px,4vw,48px) clamp(14px,4vw,20px)" }}>
+        {selected.img && <img src={selected.img} alt={selected.title} style={{ width:"100%",borderRadius:16,marginBottom:28,maxHeight:360,objectFit:"cover" }}/>}
+        <div style={{ ...card,padding:"28px 24px" }}>
+          {selected.content.split("\\n").map((line,i)=>(
+            line.trim()==='' ? <div key={i} style={{ height:10 }}/> :
+            line.match(/^\d\./) ? <p key={i} style={{ fontWeight:700,marginBottom:6,fontSize:14 }}>{line}</p> :
+            line.startsWith("•") ? <p key={i} style={{ paddingLeft:16,color:"var(--text2)",marginBottom:5,fontSize:13,lineHeight:1.7 }}>{line}</p> :
+            line.toUpperCase()===line && line.length>3 ? <h3 key={i} style={{ fontWeight:900,marginTop:16,marginBottom:8,color:"#059669",fontSize:14 }}>{line}</h3> :
+            <p key={i} style={{ fontSize:13,lineHeight:1.8,color:"var(--text2)",marginBottom:6 }}>{line}</p>
+          ))}
+        </div>
+        <div style={{ ...card,marginTop:20,background:"linear-gradient(135deg,#d1fae5,#e0f2fe)",border:"none",padding:20,textAlign:"center" }}>
+          <div style={{ fontWeight:800,marginBottom:6 }}>💊 Get medicines mentioned in this article</div>
+          <button style={btn()} onClick={()=>go("medicines")}>Browse Medicines →</button>
+        </div>
+      </section>
+    </div>
+  );
+
+  return (
+    <div className="pg">
+      <div style={{ background:"linear-gradient(135deg,#1e293b,#0f172a)",padding:"clamp(36px,5vw,60px) clamp(16px,4vw,20px)",textAlign:"center",position:"relative",overflow:"hidden" }}>
+        <div style={{ position:"absolute",inset:0,opacity:.04,backgroundImage:"radial-gradient(#fff 1px,transparent 1px)",backgroundSize:"32px 32px" }}/>
+        <div style={{ position:"relative" }}>
+          <h1 style={{ color:"#fff",fontSize:"clamp(24px,5vw,42px)",fontWeight:900,marginBottom:8 }}>📰 Health Blog</h1>
+          <p style={{ color:"#94a3b8",fontSize:14 }}>Expert health tips, medicine guides & wellness advice from TR Pharmacy</p>
+        </div>
+      </div>
+      <section style={{ maxWidth:1100,margin:"0 auto",padding:"clamp(24px,4vw,48px) clamp(14px,4vw,20px)" }}>
+        <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:12,marginBottom:24 }}>
+          <div style={{ display:"flex",gap:7,flexWrap:"wrap" }}>
+            {cats.map(c=><button key={c} onClick={()=>setCat(c)} style={{ padding:"6px 16px",borderRadius:50,border:cat===c?"none":"1.5px solid var(--bdr)",background:cat===c?"#059669":"var(--bg2)",color:cat===c?"#fff":"var(--text2)",fontWeight:700,fontSize:12,cursor:"pointer",transition:"all .18s" }}>{c}</button>)}
+          </div>
+          {isAdmin && <button style={{ ...btn(),fontSize:12,padding:"7px 16px" }} className="hbtn" onClick={onAdminOpen}>✏️ Manage Blog</button>}
+        </div>
+        {filtered.length===0
+          ? <div style={{ textAlign:"center",padding:"60px 0",color:"var(--text2)" }}><div style={{ fontSize:48,marginBottom:12 }}>📝</div><p>No posts yet. Admin can add posts.</p></div>
+          : <div className="g3 card-grid">
+              {filtered.map(b=>(
+                <div key={b.id} style={{ ...card,padding:0,overflow:"hidden",cursor:"pointer" }} className="lift" onClick={()=>setSelected(b)}>
+                  <div style={{ height:160,background:"linear-gradient(135deg,#1e293b,#0f172a)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:60,position:"relative",overflow:"hidden" }}>
+                    {b.img ? <img src={b.img} alt={b.title} style={{ width:"100%",height:"100%",objectFit:"cover" }}/> : <span style={{ opacity:.6 }}>{b.emoji}</span>}
+                    <div style={{ position:"absolute",bottom:0,left:0,right:0,background:"linear-gradient(to top,rgba(0,0,0,.7),transparent)",padding:"12px 14px" }}>
+                      <span style={{ background:"rgba(5,150,105,.85)",color:"#fff",borderRadius:50,padding:"2px 10px",fontSize:10,fontWeight:700 }}>{b.tag}</span>
+                    </div>
+                  </div>
+                  <div style={{ padding:"16px 18px 20px" }}>
+                    <div style={{ fontSize:11,color:"var(--text2)",marginBottom:6 }}>{b.date} · {b.category}</div>
+                    <h3 style={{ fontWeight:800,fontSize:14,marginBottom:6,lineHeight:1.4 }}>{b.title}</h3>
+                    <p style={{ fontSize:12,color:"var(--text2)",lineHeight:1.6,marginBottom:12 }}>{b.summary}</p>
+                    <span style={{ fontSize:12,color:"#059669",fontWeight:700 }}>Read More →</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+        }
+      </section>
+    </div>
+  );
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  PAGE: HEALTH TOOLS  (BMI + Dose calculator)
+// ─────────────────────────────────────────────────────────────────────────────
+const ToolsPage = React.memo(function ToolsPage({ go }) {
+  const [tool, setTool] = React.useState("bmi");
+  const [height, setHeight] = React.useState("");
+  const [weight, setWeight] = React.useState("");
+  const [bmiResult, setBmiResult] = React.useState(null);
+  const [age, setAge] = React.useState("");
+  const [drugName, setDrugName] = React.useState("");
+  const [doseWeight, setDoseWeight] = React.useState("");
+  const [doseResult, setDoseResult] = React.useState(null);
+  const card = mkCard(); const btn = mkBtn; const inp = mkInp();
+
+  const calcBMI = () => {
+    const h = parseFloat(height)/100, w = parseFloat(weight);
+    if (!h||!w||h<=0||w<=0) return;
+    const bmi = (w/(h*h)).toFixed(1);
+    let cat,color,advice;
+    if (bmi<18.5){cat="Underweight";color="#f59e0b";advice="Consider nutritional supplements. Visit TR Pharmacy.";}
+    else if (bmi<25){cat="Normal Weight ✅";color="#059669";advice="Great! Maintain a healthy diet and exercise.";}
+    else if (bmi<30){cat="Overweight";color="#f97316";advice="Focus on diet control and regular exercise.";}
+    else{cat="Obese";color="#ef4444";advice="Please consult a doctor. Regular monitoring advised.";}
+    setBmiResult({bmi,cat,color,advice});
+  };
+
+  const calcDose = () => {
+    const w = parseFloat(doseWeight);
+    if (!w||w<=0||!drugName.trim()) return;
+    const doses = {"paracetamol":15,"ibuprofen":10,"amoxicillin":25,"cetirizine":0.25};
+    const mgPerKg = doses[drugName.toLowerCase()] || 10;
+    const dose = (w * mgPerKg).toFixed(0);
+    setDoseResult({ drug:drugName, weight:w, mgPerKg, dose, note:"This is a general estimate only. Always follow doctor's prescription." });
+  };
+
+  return (
+    <div className="pg">
+      <div style={{ background:"linear-gradient(135deg,#1e3a5f,#0c4a6e)",padding:"clamp(36px,5vw,60px) clamp(16px,4vw,20px)",textAlign:"center" }}>
+        <h1 style={{ color:"#fff",fontSize:"clamp(24px,5vw,42px)",fontWeight:900,marginBottom:8 }}>🧮 Health Tools</h1>
+        <p style={{ color:"#bae6fd",fontSize:14 }}>Free calculators to help you understand your health better</p>
+      </div>
+      <section style={{ maxWidth:760,margin:"0 auto",padding:"clamp(24px,4vw,48px) clamp(14px,4vw,20px)" }}>
+        <div style={{ display:"flex",gap:8,marginBottom:28,justifyContent:"center" }}>
+          {[["bmi","⚖️ BMI Calculator"],["dose","💊 Dose Calculator"]].map(([t,l])=>(
+            <button key={t} onClick={()=>setTool(t)} style={{ padding:"10px 22px",borderRadius:50,border:tool===t?"none":"1.5px solid var(--bdr)",background:tool===t?"#059669":"var(--bg2)",color:tool===t?"#fff":"var(--text2)",fontWeight:700,fontSize:13,cursor:"pointer",transition:"all .18s" }}>{l}</button>
+          ))}
+        </div>
+
+        {tool==="bmi" && (
+          <div style={card}>
+            <h3 style={{ fontWeight:900,fontSize:17,marginBottom:4 }}>⚖️ BMI Calculator</h3>
+            <p style={{ fontSize:12,color:"var(--text2)",marginBottom:20 }}>Body Mass Index — understand if your weight is healthy</p>
+            <div className="hg" style={{ gap:14,marginBottom:16 }}>
+              <div><label style={{ fontWeight:700,fontSize:12,marginBottom:5,display:"block" }}>Height (cm)</label><input style={inp} type="number" placeholder="e.g. 170" value={height} onChange={e=>setHeight(e.target.value)}/></div>
+              <div><label style={{ fontWeight:700,fontSize:12,marginBottom:5,display:"block" }}>Weight (kg)</label><input style={inp} type="number" placeholder="e.g. 70" value={weight} onChange={e=>setWeight(e.target.value)}/></div>
+            </div>
+            <button style={{ ...btn(),width:"100%",padding:"12px",justifyContent:"center" }} className="hbtn" onClick={calcBMI}>Calculate BMI</button>
+            {bmiResult && (
+              <div style={{ marginTop:20,padding:20,borderRadius:14,background:`${bmiResult.color}18`,border:`2px solid ${bmiResult.color}44`,animation:"popIn .3s ease" }}>
+                <div style={{ textAlign:"center",marginBottom:12 }}>
+                  <div style={{ fontSize:42,fontWeight:900,color:bmiResult.color }}>{bmiResult.bmi}</div>
+                  <div style={{ fontWeight:800,fontSize:15,color:bmiResult.color }}>{bmiResult.cat}</div>
+                </div>
+                <div style={{ background:"rgba(0,0,0,.04)",borderRadius:10,padding:"10px 14px",marginBottom:12 }}>
+                  <div style={{ fontWeight:700,fontSize:12,marginBottom:4 }}>BMI Scale:</div>
+                  {[["<18.5","Underweight","#f59e0b"],["18.5-24.9","Normal","#059669"],["25-29.9","Overweight","#f97316"],["≥30","Obese","#ef4444"]].map(([r,l,c])=>(
+                    <div key={l} style={{ display:"flex",justifyContent:"space-between",fontSize:11,padding:"3px 0",borderBottom:"1px solid rgba(0,0,0,.05)" }}>
+                      <span style={{ color:"var(--text2)" }}>{r}</span><span style={{ fontWeight:700,color:c }}>{l}</span>
+                    </div>
+                  ))}
+                </div>
+                <p style={{ fontSize:12,color:"var(--text2)",lineHeight:1.6 }}>💡 {bmiResult.advice}</p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {tool==="dose" && (
+          <div style={card}>
+            <h3 style={{ fontWeight:900,fontSize:17,marginBottom:4 }}>💊 Dose Calculator</h3>
+            <p style={{ fontSize:12,color:"var(--text2)",marginBottom:6 }}>Estimate medicine dose based on body weight</p>
+            <div style={{ background:"#fef3c7",borderRadius:10,padding:"10px 14px",marginBottom:18,fontSize:12,color:"#92400e",fontWeight:600 }}>⚠️ For reference only. Always follow your doctor's prescription.</div>
+            <div style={{ display:"flex",flexDirection:"column",gap:13,marginBottom:16 }}>
+              <div><label style={{ fontWeight:700,fontSize:12,marginBottom:5,display:"block" }}>Medicine Name</label>
+                <select style={inp} value={drugName} onChange={e=>setDrugName(e.target.value)}>
+                  <option value="">Select medicine...</option>
+                  {["Paracetamol","Ibuprofen","Amoxicillin","Cetirizine"].map(d=><option key={d} value={d}>{d}</option>)}
+                </select>
+              </div>
+              <div><label style={{ fontWeight:700,fontSize:12,marginBottom:5,display:"block" }}>Body Weight (kg)</label><input style={inp} type="number" placeholder="e.g. 60" value={doseWeight} onChange={e=>setDoseWeight(e.target.value)}/></div>
+            </div>
+            <button style={{ ...btn(),width:"100%",padding:"12px",justifyContent:"center" }} className="hbtn" onClick={calcDose}>Calculate Dose</button>
+            {doseResult && (
+              <div style={{ marginTop:20,padding:18,borderRadius:14,background:"#d1fae5",border:"2px solid #a7f3d0",animation:"popIn .3s ease" }}>
+                <div style={{ fontWeight:900,fontSize:18,color:"#059669",marginBottom:6 }}>{doseResult.dose} mg</div>
+                <div style={{ fontSize:12,color:"var(--text2)",marginBottom:4 }}>{doseResult.drug} · {doseResult.weight}kg · {doseResult.mgPerKg}mg/kg</div>
+                <div style={{ fontSize:11,color:"#dc2626",fontWeight:600 }}>{doseResult.note}</div>
+              </div>
+            )}
+          </div>
+        )}
+
+        <div style={{ ...card,marginTop:20,background:"var(--bg3)",padding:18,textAlign:"center" }}>
+          <p style={{ fontSize:13,color:"var(--text2)",marginBottom:10 }}>Need medicine advice? Our pharmacist is available.</p>
+          <button style={btn()} onClick={()=>go("contact")}>💬 Ask Pharmacist</button>
+        </div>
+      </section>
+    </div>
+  );
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  PAGE: ORDER TRACKING
+// ─────────────────────────────────────────────────────────────────────────────
+const TrackingPage = React.memo(function TrackingPage({ contact: contactProp }) {
+  const contact = contactProp || DEFAULT_CONTACT;
+  const [orderId, setOrderId] = React.useState("");
+  const [phone, setPhone] = React.useState("");
+  const [result, setResult] = React.useState(null);
+  const card = mkCard(); const btn = mkBtn; const inp = mkInp();
+
+  const DEMO_ORDERS = {
+    "TRP001": { id:"TRP001", status:"delivered", items:["Paracetamol 500mg","Vitamin C"], amount:152, address:"Jankipuram, Lucknow", date:"12 Mar 2026", steps:["Order Placed","Confirmed","Preparing","Out for Delivery","Delivered"] },
+    "TRP002": { id:"TRP002", status:"out_for_delivery", items:["BP Monitor","Cetrizine 10mg"], amount:1527, address:"Sector G, Lucknow", date:"14 Mar 2026", steps:["Order Placed","Confirmed","Preparing","Out for Delivery"] },
+    "TRP003": { id:"TRP003", status:"preparing", items:["Omega-3 Softgels"], amount:180, address:"Jankipuram Extension", date:"15 Mar 2026", steps:["Order Placed","Confirmed","Preparing"] },
+  };
+
+  const allSteps = ["Order Placed","Confirmed","Preparing","Out for Delivery","Delivered"];
+  const statusColors = { "delivered":"#059669","out_for_delivery":"#0ea5e9","preparing":"#f59e0b","confirmed":"#8b5cf6","placed":"#64748b" };
+
+  const track = () => {
+    if (!orderId.trim()) return;
+    const order = DEMO_ORDERS[orderId.toUpperCase()];
+    if (order) { setResult({ found:true, ...order }); }
+    else { setResult({ found:false }); }
+  };
+
+  return (
+    <div className="pg">
+      <div style={{ background:"linear-gradient(135deg,#1e3a5f,#064e3b)",padding:"clamp(36px,5vw,60px) clamp(16px,4vw,20px)",textAlign:"center" }}>
+        <h1 style={{ color:"#fff",fontSize:"clamp(24px,5vw,42px)",fontWeight:900,marginBottom:8 }}>📦 Order Tracking</h1>
+        <p style={{ color:"#a7f3d0",fontSize:14 }}>Track your medicine delivery in real-time</p>
+      </div>
+      <section style={{ maxWidth:640,margin:"0 auto",padding:"clamp(24px,4vw,48px) clamp(14px,4vw,20px)" }}>
+        <div style={card}>
+          <h3 style={{ fontWeight:900,fontSize:16,marginBottom:18 }}>Enter Order Details</h3>
+          <div style={{ display:"flex",flexDirection:"column",gap:13,marginBottom:16 }}>
+            <div><label style={{ fontWeight:700,fontSize:12,marginBottom:5,display:"block" }}>Order ID</label><input style={inp} placeholder="e.g. TRP001, TRP002, TRP003" value={orderId} onChange={e=>setOrderId(e.target.value)} onKeyDown={e=>e.key==="Enter"&&track()}/></div>
+            <div><label style={{ fontWeight:700,fontSize:12,marginBottom:5,display:"block" }}>Phone Number (optional)</label><input style={inp} type="tel" placeholder="Registered phone" value={phone} onChange={e=>setPhone(e.target.value)}/></div>
+          </div>
+          <button style={{ ...btn(),width:"100%",padding:"12px",justifyContent:"center" }} className="hbtn" onClick={track}>🔍 Track Order</button>
+          <p style={{ fontSize:11,color:"var(--text2)",marginTop:10,textAlign:"center" }}>Try demo: TRP001, TRP002, or TRP003</p>
+        </div>
+
+        {result && !result.found && (
+          <div style={{ ...card,marginTop:16,background:"#fee2e2",border:"1px solid #fca5a5",textAlign:"center" }}>
+            <div style={{ fontSize:36,marginBottom:10 }}>❌</div>
+            <p style={{ fontWeight:800,marginBottom:6 }}>Order Not Found</p>
+            <p style={{ fontSize:12,color:"var(--text2)",marginBottom:14 }}>Please check your Order ID or contact us.</p>
+            <a href={`https://wa.me/91${contact?.phone1 || '6389482072'}`} target="_blank" rel="noreferrer" style={{ ...btn("wa"),textDecoration:"none",fontSize:12 }}>💬 WhatsApp Support</a>
+          </div>
+        )}
+
+        {result && result.found && (
+          <div style={{ ...card,marginTop:16,animation:"popIn .3s ease" }}>
+            <div style={{ display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:16,flexWrap:"wrap",gap:8 }}>
+              <div>
+                <div style={{ fontWeight:900,fontSize:15 }}>Order #{result.id}</div>
+                <div style={{ fontSize:12,color:"var(--text2)" }}>{result.date}</div>
+              </div>
+              <span style={{ background:statusColors[result.status]+"22",color:statusColors[result.status],borderRadius:50,padding:"4px 12px",fontSize:12,fontWeight:700 }}>
+                {result.steps[result.steps.length-1]}
+              </span>
+            </div>
+            {/* Progress steps */}
+            <div style={{ marginBottom:20 }}>
+              {allSteps.map((step,i)=>{
+                const done = result.steps.includes(step);
+                const current = result.steps[result.steps.length-1]===step;
+                return (
+                  <div key={step} style={{ display:"flex",gap:12,marginBottom:i<allSteps.length-1?0:0 }}>
+                    <div style={{ display:"flex",flexDirection:"column",alignItems:"center" }}>
+                      <div style={{ width:28,height:28,borderRadius:14,background:done?"#059669":"var(--bg3)",border:`2px solid ${done?"#059669":"var(--bdr)"}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,color:done?"#fff":"var(--text2)",flexShrink:0,boxShadow:current?"0 0 0 4px rgba(5,150,105,.2)":"none",transition:"all .2s" }}>
+                        {done?"✓":i+1}
+                      </div>
+                      {i<allSteps.length-1&&<div style={{ width:2,height:24,background:done?"#059669":"var(--bdr)",margin:"3px 0",transition:"background .2s" }}/>}
+                    </div>
+                    <div style={{ paddingTop:4,paddingBottom:i<allSteps.length-1?24:0 }}>
+                      <div style={{ fontWeight:current?800:600,fontSize:13,color:done?"var(--text)":"var(--text2)" }}>{step}</div>
+                      {current&&<div style={{ fontSize:11,color:"#059669",marginTop:2 }}>● Currently here</div>}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            <div style={{ background:"var(--bg3)",borderRadius:12,padding:14,fontSize:12 }}>
+              <div style={{ marginBottom:5 }}><b>Items:</b> {result.items.join(", ")}</div>
+              <div style={{ marginBottom:5 }}><b>Amount:</b> ₹{result.amount}</div>
+              <div><b>Deliver to:</b> {result.address}</div>
+            </div>
+            <a href={`https://wa.me/91${contact?.phone1 || '6389482072'}?text=Hi! I need help with order ${result.id}`} target="_blank" rel="noreferrer" style={{ ...btn("wa"),textDecoration:"none",width:"100%",justifyContent:"center",marginTop:14,padding:"11px" }}>💬 Need Help? WhatsApp Us</a>
+          </div>
+        )}
+      </section>
+    </div>
+  );
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  PAGE: LOYALTY POINTS
+// ─────────────────────────────────────────────────────────────────────────────
+const LoyaltyPage = React.memo(function LoyaltyPage({ go, contact: contactProp }) {
+  const contact = contactProp || DEFAULT_CONTACT;
+  const [loyalty, setLoyalty] = React.useState(() => lsGet("trp_loyalty", { points:0, history:[], totalSpent:0 }));
+  const [redeemPhone, setRedeemPhone] = React.useState("");
+  const card = mkCard(); const btn = mkBtn; const inp = mkInp();
+
+  const TIERS = [
+    { name:"Bronze", min:0, max:499, color:"#cd7f32", icon:"🥉", perks:["1 point per ₹10 spent","Basic member benefits"] },
+    { name:"Silver", min:500, max:1499, color:"#94a3b8", icon:"🥈", perks:["1.5 points per ₹10 spent","5% bonus on birthday","Priority counter service"] },
+    { name:"Gold", min:1500, max:4999, color:"#f59e0b", icon:"🥇", perks:["2 points per ₹10 spent","Free home delivery","10% birthday discount","Monthly surprise gift"] },
+    { name:"Platinum", min:5000, max:Infinity, color:"#8b5cf6", icon:"💎", perks:["3 points per ₹10 spent","VIP pharmacist line","Free consultation","Quarterly health kit"] },
+  ];
+
+  const currentTier = TIERS.find(t => loyalty.points >= t.min && loyalty.points <= t.max) || TIERS[0];
+  const nextTier = TIERS[TIERS.indexOf(currentTier)+1];
+  const progress = nextTier ? Math.min(100,((loyalty.points-currentTier.min)/(nextTier.min-currentTier.min))*100) : 100;
+
+  const addDemo = () => {
+    const pts = Math.floor(Math.random()*50)+10;
+    const amt = pts * 10;
+    const updated = { points:loyalty.points+pts, totalSpent:loyalty.totalSpent+amt, history:[{pts,amt,date:new Date().toLocaleDateString("en-IN"),desc:"Medicine purchase"},...loyalty.history.slice(0,9)] };
+    setLoyalty(updated);
+    lsSet("trp_loyalty",updated);
+  };
+
+  const redeem = () => {
+    if (loyalty.points<100) { return; }
+    const updated = { ...loyalty, points:loyalty.points-100, history:[{pts:-100,amt:0,date:new Date().toLocaleDateString("en-IN"),desc:"Redeemed ₹50 discount"},...loyalty.history.slice(0,9)] };
+    setLoyalty(updated);
+    lsSet("trp_loyalty",updated);
+  };
+
+  return (
+    <div className="pg">
+      <div style={{ background:"linear-gradient(135deg,#1e1b4b,#4f46e5)",padding:"clamp(36px,5vw,60px) clamp(16px,4vw,20px)",textAlign:"center",position:"relative",overflow:"hidden" }}>
+        <div style={{ position:"absolute",inset:0,opacity:.05,backgroundImage:"radial-gradient(#fff 1px,transparent 1px)",backgroundSize:"28px 28px" }}/>
+        <div style={{ position:"relative" }}>
+          <h1 style={{ color:"#fff",fontSize:"clamp(24px,5vw,42px)",fontWeight:900,marginBottom:8 }}>⭐ Loyalty Points</h1>
+          <p style={{ color:"#c7d2fe",fontSize:14 }}>Earn points on every purchase and unlock exclusive rewards</p>
+        </div>
+      </div>
+      <section style={{ maxWidth:800,margin:"0 auto",padding:"clamp(24px,4vw,48px) clamp(14px,4vw,20px)" }}>
+        {/* Points card */}
+        <div style={{ background:`linear-gradient(135deg,${currentTier.color},${currentTier.color}88)`,borderRadius:22,padding:"28px 24px",color:"#fff",marginBottom:20,position:"relative",overflow:"hidden",boxShadow:`0 8px 32px ${currentTier.color}44` }}>
+          <div style={{ position:"absolute",right:-20,top:-20,fontSize:100,opacity:.12 }}>{currentTier.icon}</div>
+          <div style={{ position:"relative" }}>
+            <div style={{ display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:16,flexWrap:"wrap",gap:10 }}>
+              <div>
+                <div style={{ fontSize:11,opacity:.8,textTransform:"uppercase",letterSpacing:1,marginBottom:4 }}>Total Points</div>
+                <div style={{ fontSize:48,fontWeight:900,lineHeight:1 }}>{loyalty.points}</div>
+                <div style={{ fontSize:12,opacity:.8,marginTop:4 }}>≈ ₹{Math.floor(loyalty.points/2)} redeemable value</div>
+              </div>
+              <div style={{ textAlign:"right" }}>
+                <div style={{ fontSize:11,opacity:.8,textTransform:"uppercase",letterSpacing:1,marginBottom:4 }}>Your Tier</div>
+                <div style={{ fontSize:22,fontWeight:900 }}>{currentTier.icon} {currentTier.name}</div>
+                <div style={{ fontSize:12,opacity:.8 }}>Total Spent: ₹{loyalty.totalSpent}</div>
+              </div>
+            </div>
+            {nextTier && (
+              <div>
+                <div style={{ display:"flex",justifyContent:"space-between",fontSize:11,opacity:.8,marginBottom:5 }}>
+                  <span>{nextTier.min-loyalty.points} points to {nextTier.icon} {nextTier.name}</span>
+                  <span>{Math.round(progress)}%</span>
+                </div>
+                <div style={{ background:"rgba(255,255,255,.25)",borderRadius:50,height:6,overflow:"hidden" }}>
+                  <div style={{ height:"100%",width:`${progress}%`,background:"#fff",borderRadius:50,transition:"width .5s ease" }}/>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Tier perks */}
+        <div className="g4 card-grid" style={{ marginBottom:20 }}>
+          {TIERS.map(t=>(
+            <div key={t.name} style={{ ...card,border:`2px solid ${currentTier.name===t.name?t.color:"var(--bdr)"}`,background:currentTier.name===t.name?t.color+"11":"var(--bg2)" }} className="lift">
+              <div style={{ textAlign:"center",marginBottom:10 }}>
+                <div style={{ fontSize:28 }}>{t.icon}</div>
+                <div style={{ fontWeight:800,fontSize:13,color:t.color }}>{t.name}</div>
+                <div style={{ fontSize:10,color:"var(--text2)" }}>{t.min===0?"Start":t.min+"+"} pts</div>
+              </div>
+              {t.perks.map(p=><div key={p} style={{ fontSize:11,color:"var(--text2)",marginBottom:4 }}>• {p}</div>)}
+            </div>
+          ))}
+        </div>
+
+        {/* Redeem + history */}
+        <div className="hg" style={{ gap:16 }}>
+          <div style={card}>
+            <h4 style={{ fontWeight:900,marginBottom:14,fontSize:15 }}>🎁 Redeem Points</h4>
+            <div style={{ background:"var(--bg3)",borderRadius:12,padding:14,marginBottom:14,fontSize:13 }}>
+              <div style={{ fontWeight:700,marginBottom:4 }}>100 points = ₹50 discount</div>
+              <div style={{ color:"var(--text2)",fontSize:12 }}>You have <b style={{ color:"#059669" }}>{loyalty.points} points</b> · Can redeem <b>{Math.floor(loyalty.points/100)}</b> times</div>
+            </div>
+            <button style={{ ...btn(),width:"100%",padding:"11px",justifyContent:"center",marginBottom:10,opacity:loyalty.points<100?.5:1 }} className="hbtn" onClick={redeem} disabled={loyalty.points<100}>
+              🎁 Redeem 100 pts for ₹50 off
+            </button>
+            <button style={{ ...btn("out"),width:"100%",padding:"10px",justifyContent:"center",fontSize:12 }} onClick={addDemo}>
+              + Simulate Purchase (earn points)
+            </button>
+          </div>
+          <div style={card}>
+            <h4 style={{ fontWeight:900,marginBottom:14,fontSize:15 }}>📋 Points History</h4>
+            {loyalty.history.length===0
+              ? <p style={{ fontSize:12,color:"var(--text2)",textAlign:"center",padding:"20px 0" }}>No history yet. Make a purchase to earn points!</p>
+              : loyalty.history.slice(0,6).map((h,i)=>(
+                <div key={i} style={{ display:"flex",justifyContent:"space-between",padding:"8px 0",borderBottom:"1px solid var(--bdr)",fontSize:12 }}>
+                  <div><div style={{ fontWeight:700 }}>{h.desc}</div><div style={{ color:"var(--text2)",fontSize:11 }}>{h.date}</div></div>
+                  <div style={{ fontWeight:900,color:h.pts>0?"#059669":"#ef4444",fontSize:14 }}>{h.pts>0?"+":""}{h.pts}</div>
+                </div>
+              ))
+            }
+          </div>
+        </div>
+      </section>
+    </div>
+  );
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  PAGE: DOCTOR CONSULTATION
+// ─────────────────────────────────────────────────────────────────────────────
+const DoctorsPage = React.memo(function DoctorsPage({ go, doctors, isAdmin, onAdminOpen, contact: contactProp, onToast }) {
+  const contact = contactProp || DEFAULT_CONTACT;
+  useReveal();
+  const [booking, setBooking] = React.useState(null);
+  const [form, setForm] = React.useState({ name:"",phone:"",date:"",time:"",reason:"" });
+  const [done, setDone] = React.useState(false);
+  const card = mkCard(); const btn = mkBtn; const inp = mkInp();
+
+  const submit = () => {
+    if (!form.name||!form.phone||!form.date) { onToast("Fill Name, Phone and Date","err"); return; }
+    const bookings = lsGet("trp_bookings",[]);
+    lsSet("trp_bookings",[...bookings,{...form,doctor:booking.name,specialty:booking.specialty,fee:booking.fee,bookedAt:new Date().toLocaleString("en-IN")}]);
+    setDone(true);
+    onToast(`Appointment booked with ${booking.name}! ✅`);
+  };
+
+  if (done) return (
+    <div style={{ textAlign:"center",padding:"80px 20px" }} className="pg">
+      <div style={{ fontSize:64,marginBottom:14 }}>✅</div>
+      <h2 style={{ fontWeight:900,fontSize:22,marginBottom:8 }}>Appointment Booked!</h2>
+      <p style={{ color:"var(--text2)",marginBottom:20,fontSize:13,maxWidth:380,margin:"0 auto 20px",lineHeight:1.7 }}>
+        Your appointment with <b>{booking?.name}</b> on <b>{form.date}</b> is confirmed. We'll remind you 1 hour before.
+      </p>
+      <div style={{ display:"flex",gap:10,justifyContent:"center",flexWrap:"wrap" }}>
+        <button style={btn()} onClick={()=>{setDone(false);setBooking(null);setForm({name:"",phone:"",date:"",time:"",reason:""});}}>Book Another</button>
+        <a href={`https://wa.me/91${contact?.phone1 || '6389482072'}`} target="_blank" rel="noreferrer" style={{ ...btn("wa"),textDecoration:"none" }}>💬 WhatsApp</a>
+      </div>
+    </div>
+  );
+
+  if (booking) return (
+    <div className="pg">
+      <div style={{ background:"linear-gradient(135deg,#1e3a5f,#064e3b)",padding:"clamp(36px,6vw,54px) 20px",textAlign:"center" }}>
+        <button onClick={()=>setBooking(null)} style={{ ...btn("ghost"),fontSize:12,marginBottom:14,border:"1px solid rgba(255,255,255,.2)",color:"#94a3b8" }}>← Back to Doctors</button>
+        <h2 style={{ color:"#fff",fontSize:"clamp(18px,4vw,28px)",fontWeight:900,marginBottom:4 }}>Book Appointment</h2>
+        <p style={{ color:"#a7f3d0",fontSize:13 }}>{booking.name} · {booking.specialty}</p>
+      </div>
+      <section style={{ maxWidth:540,margin:"0 auto",padding:"clamp(24px,4vw,40px) 16px" }}>
+        <div style={card}>
+          <div style={{ display:"flex",gap:12,padding:14,background:"var(--bg3)",borderRadius:12,marginBottom:20 }}>
+            <div style={{ width:50,height:50,borderRadius:12,background:"linear-gradient(135deg,#d1fae5,#e0f2fe)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:24,flexShrink:0 }}>
+              {booking.img?<img src={booking.img} style={{ width:"100%",height:"100%",objectFit:"cover",borderRadius:12 }} alt=""/>:"👨‍⚕️"}
+            </div>
+            <div>
+              <div style={{ fontWeight:800,fontSize:14 }}>{booking.name}</div>
+              <div style={{ fontSize:12,color:"var(--text2)" }}>{booking.specialty} · {booking.qual}</div>
+              <div style={{ fontSize:12,color:"#059669",fontWeight:700 }}>Consultation Fee: ₹{booking.fee}</div>
+            </div>
+          </div>
+          <div style={{ display:"flex",flexDirection:"column",gap:13 }}>
+            {[["Patient Name *","name","text"],["Phone Number *","phone","tel"],["Preferred Date *","date","date"],["Preferred Time","time","time"]].map(([l,k,t])=>(
+              <div key={k}><label style={{ fontWeight:700,fontSize:12,marginBottom:5,display:"block" }}>{l}</label><input style={inp} type={t} placeholder={l.replace(" *","")} value={form[k]} onChange={e=>setForm(p=>({...p,[k]:e.target.value}))}/></div>
+            ))}
+            <div><label style={{ fontWeight:700,fontSize:12,marginBottom:5,display:"block" }}>Reason for Visit</label><textarea style={{ ...inp,height:70,resize:"vertical" }} placeholder="Brief description of your concern..." value={form.reason} onChange={e=>setForm(p=>({...p,reason:e.target.value}))}/></div>
+            <button style={{ ...btn(),padding:"13px",justifyContent:"center",width:"100%" }} className="hbtn" onClick={submit}>✅ Confirm Appointment</button>
+          </div>
+        </div>
+      </section>
+    </div>
+  );
+
+  return (
+    <div className="pg">
+      <div style={{ background:"linear-gradient(135deg,#1e3a5f,#064e3b)",padding:"clamp(36px,5vw,60px) clamp(16px,4vw,20px)",textAlign:"center" }}>
+        <h1 style={{ color:"#fff",fontSize:"clamp(24px,5vw,42px)",fontWeight:900,marginBottom:8 }}>👨‍⚕️ Doctor Consultation</h1>
+        <p style={{ color:"#a7f3d0",fontSize:14 }}>Book appointments with trusted doctors near Jankipuram, Lucknow</p>
+      </div>
+      <section style={{ maxWidth:1100,margin:"0 auto",padding:"clamp(24px,4vw,48px) clamp(14px,4vw,20px)" }}>
+        {isAdmin && <div style={{ textAlign:"right",marginBottom:16 }}><button style={{ ...btn(),fontSize:12,padding:"7px 16px" }} className="hbtn" onClick={onAdminOpen}>⚙️ Manage Doctors</button></div>}
+        <div className="g3 card-grid">
+          {doctors.map(d=>(
+            <div key={d.id} style={{ ...card,padding:0,overflow:"hidden" }} className="lift">
+              <div style={{ height:100,background:`linear-gradient(135deg,#d1fae5,#e0f2fe)`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:48,position:"relative" }}>
+                {d.img ? <img src={d.img} alt={d.name} style={{ width:"100%",height:"100%",objectFit:"cover" }}/> : "👨‍⚕️"}
+                <div style={{ position:"absolute",top:8,right:8,background:d.available?"#059669":"#94a3b8",color:"#fff",borderRadius:50,padding:"2px 9px",fontSize:10,fontWeight:700 }}>
+                  {d.available?"✓ Available":"Unavailable"}
+                </div>
+              </div>
+              <div style={{ padding:"16px 18px 18px" }}>
+                <h3 style={{ fontWeight:900,fontSize:15,marginBottom:3 }}>{d.name}</h3>
+                <div style={{ fontSize:12,color:"#0ea5e9",fontWeight:700,marginBottom:4 }}>{d.specialty}</div>
+                <div style={{ fontSize:11,color:"var(--text2)",marginBottom:3 }}>{d.qual} · {d.exp} experience</div>
+                <div style={{ fontSize:11,color:"var(--text2)",marginBottom:3 }}>🕐 {d.timing}</div>
+                <div style={{ fontSize:11,color:"var(--text2)",marginBottom:12 }}>📍 {d.location}</div>
+                <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center" }}>
+                  <span style={{ fontWeight:900,fontSize:15,color:"#059669" }}>₹{d.fee}</span>
+                  <button style={{ ...btn(d.available?"p":"ghost"),fontSize:12,padding:"7px 14px",cursor:d.available?"pointer":"not-allowed",opacity:d.available?1:.6 }} className={d.available?"hbtn":""} onClick={()=>d.available&&setBooking(d)}>
+                    {d.available?"Book Now →":"Unavailable"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+        <div style={{ ...card,marginTop:28,background:"var(--bg3)",padding:20,textAlign:"center" }}>
+          <p style={{ fontSize:13,color:"var(--text2)",marginBottom:12 }}>Need urgent consultation? Call or WhatsApp us directly.</p>
+          <div style={{ display:"flex",gap:10,justifyContent:"center",flexWrap:"wrap" }}>
+            <a href={`tel:${contact?.phone1 || '6389482072'}`} style={{ ...btn(),textDecoration:"none" }}>📞 {(contact?.phone1 || '6389482072')}</a>
+            <a href={`https://wa.me/91${contact?.phone1 || '6389482072'}`} target="_blank" rel="noreferrer" style={{ ...btn("wa"),textDecoration:"none" }}>💬 WhatsApp</a>
+          </div>
+        </div>
+      </section>
+    </div>
+  );
+});
+const Footer = React.memo(function Footer({ go, services, contact: contactProp }) {
+  const contact = contactProp || DEFAULT_CONTACT;
   return (
     <footer style={{ background:"#0f172a",color:"#94a3b8",padding:"44px 20px 20px" }}>
       <div style={{ maxWidth:1200,margin:"0 auto",marginBottom:32 }} className="fg">
@@ -1447,10 +2942,10 @@ const Footer = React.memo(function Footer({ go, services, contact }) {
             <div style={{ width:30,height:30,borderRadius:8,background:"linear-gradient(135deg,#059669,#0ea5e9)",display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",fontWeight:900,fontSize:15 }}>✚</div>
             <span style={{ color:"#fff",fontWeight:900,fontSize:15 }}>TR Pharmacy</span>
           </div>
-          <p style={{ fontSize:12,lineHeight:1.8,marginBottom:13 }}>{contact.tagline}. {contact.about.split("—")[0]}</p>
+          <p style={{ fontSize:12,lineHeight:1.8,marginBottom:13 }}>{(contact?.tagline || 'Your Trusted Health Partner')}. {(contact?.about || 'TR Pharmacy — Quality medicines & expert care.').split("—")[0]}</p>
           <div style={{ display:"flex",gap:7 }}>
-            <a href={`https://wa.me/91${contact.phone1}`} target="_blank" rel="noreferrer" style={{ width:32,height:32,borderRadius:8,background:"#25d366",display:"flex",alignItems:"center",justifyContent:"center",textDecoration:"none" }}><WAIcon/></a>
-            <a href={`tel:${contact.phone1}`} style={{ width:32,height:32,borderRadius:8,background:"#1e293b",display:"flex",alignItems:"center",justifyContent:"center",textDecoration:"none",color:"#94a3b8",fontSize:14 }}>📞</a>
+            <a href={`https://wa.me/91${contact?.phone1 || '6389482072'}`} target="_blank" rel="noreferrer" style={{ width:32,height:32,borderRadius:8,background:"#25d366",display:"flex",alignItems:"center",justifyContent:"center",textDecoration:"none" }}><WAIcon/></a>
+            <a href={`tel:${contact?.phone1 || '6389482072'}`} style={{ width:32,height:32,borderRadius:8,background:"#1e293b",display:"flex",alignItems:"center",justifyContent:"center",textDecoration:"none",color:"#94a3b8",fontSize:14 }}>📞</a>
           </div>
         </div>
         <div>
@@ -1465,19 +2960,19 @@ const Footer = React.memo(function Footer({ go, services, contact }) {
         </div>
         <div>
           <h4 style={{ color:"#fff",fontWeight:800,marginBottom:11,fontSize:13 }}>Contact</h4>
-          <div style={{ display:"flex",gap:6,marginBottom:8,fontSize:12,alignItems:"flex-start" }}><span>📍</span><a href={MAPS_URL} target="_blank" rel="noreferrer" style={{ color:"#94a3b8",textDecoration:"none" }}>{contact.address}</a></div>
-          <div style={{ display:"flex",gap:6,marginBottom:5,fontSize:12 }}><span>📞</span><a href={`tel:${contact.phone1}`} style={{ color:"#94a3b8",textDecoration:"none" }}>{contact.phone1}</a></div>
-          <div style={{ display:"flex",gap:6,marginBottom:12,fontSize:12 }}><span>📞</span><a href={`tel:${contact.phone2}`} style={{ color:"#94a3b8",textDecoration:"none" }}>{contact.phone2}</a></div>
+          <div style={{ display:"flex",gap:6,marginBottom:8,fontSize:12,alignItems:"flex-start" }}><span>📍</span><a href={MAPS_URL} target="_blank" rel="noreferrer" style={{ color:"#94a3b8",textDecoration:"none" }}>{(contact?.address || 'Shop No. 7, Janki Plaza, Jankipuram, Lucknow')}</a></div>
+          <div style={{ display:"flex",gap:6,marginBottom:5,fontSize:12 }}><span>📞</span><a href={`tel:${contact?.phone1 || '6389482072'}`} style={{ color:"#94a3b8",textDecoration:"none" }}>{(contact?.phone1 || '6389482072')}</a></div>
+          <div style={{ display:"flex",gap:6,marginBottom:12,fontSize:12 }}><span>📞</span><a href={`tel:${contact?.phone2 || '8586098544'}`} style={{ color:"#94a3b8",textDecoration:"none" }}>{(contact?.phone2 || '8586098544')}</a></div>
           <div style={{ background:"#1e293b",borderRadius:10,padding:"10px 12px" }}>
             <div style={{ fontSize:10,color:"#475569",marginBottom:2,textTransform:"uppercase",letterSpacing:1 }}>Grand Opening</div>
             <div style={{ color:"#fff",fontWeight:800,fontSize:12 }}>12 March 2026</div>
-            <div style={{ color:"#059669",fontSize:11 }}>{contact.hours}</div>
+            <div style={{ color:"#059669",fontSize:11 }}>{(contact?.hours || 'Mon-Sat: 9AM-9PM')}</div>
           </div>
         </div>
       </div>
       <div style={{ maxWidth:1200,margin:"0 auto",borderTop:"1px solid #1e293b",paddingTop:18,display:"flex",justifyContent:"space-between",flexWrap:"wrap",gap:7,fontSize:11 }}>
         <span>© 2026 TR Pharmacy, Jankipuram, Lucknow. All rights reserved.</span>
-        <span style={{ color:"#059669",fontWeight:700 }}>"{contact.tagline}"</span>
+        <span style={{ color:"#059669",fontWeight:700 }}>"{(contact?.tagline || 'Your Trusted Health Partner')}"</span>
       </div>
     </footer>
   );
@@ -1497,6 +2992,7 @@ export default function App() {
   const [showDB,    setShowDB]   = useState(false);
   const [showAdmin, setShowAdmin]= useState(false);
   const [showLogin, setShowLogin]= useState(false);
+  const [showSub,   setShowSub]  = useState(false);
   const [toast,     setToast]    = useState(null);
 
   // ── Admin auth — check saved session on load ───────────────────────────────
@@ -1529,6 +3025,8 @@ export default function App() {
 
   // ── All dynamic data loaded from localStorage on first render ──────────────
   const [meds,         setMeds]         = useState(() => { const imgs=lsGet("trp_med_imgs",{}); const base=DEFAULT_MEDS.map(m=>({...m,img:imgs[m.id]||null})); const custom=lsGet("trp_custom_meds",[]).map(m=>({...m,img:imgs[m.id]||null})); return [...base,...custom]; });
+  const [blogs,        setBlogs]        = useState(() => lsGet("trp_blogs",  DEFAULT_BLOGS));
+  const [doctors,      setDoctors]      = useState(() => lsGet("trp_doctors",DEFAULT_DOCTORS));
   const [services,     setServices]     = useState(() => lsGet("trp_services",     DEFAULT_SERVICES));
   const [testimonials, setTestimonials] = useState(() => lsGet("trp_testimonials", DEFAULT_TESTIMONIALS));
   const [faqs,         setFaqs]         = useState(() => lsGet("trp_faqs",         DEFAULT_FAQS));
@@ -1547,6 +3045,8 @@ export default function App() {
   const saveTestimonials = useCallback(v=>{ setTestimonials(v); lsSet("trp_testimonials",v); },[]);
   const saveFaqs         = useCallback(v=>{ setFaqs(v);         lsSet("trp_faqs",v);         },[]);
   const saveContact      = useCallback(v=>{ setContact(v);      lsSet("trp_contact",v);      },[]);
+  const saveBlogs        = useCallback(v=>{ setBlogs(v);        lsSet("trp_blogs",v);        },[]);
+  const saveDoctors      = useCallback(v=>{ setDoctors(v);      lsSet("trp_doctors",v);      },[]);
 
   // ── Theme ──────────────────────────────────────────────────────────────────
   const cssVars = useMemo(() => dark
@@ -1556,6 +3056,8 @@ export default function App() {
 
   // ── Stable callbacks ───────────────────────────────────────────────────────
   const go         = useCallback((p)=>{ setPage(p); window.scrollTo({top:0,behavior:"smooth"}); },[]);
+  const onSubOpen  = useCallback(()=>setShowSub(true),[]);
+  const onSubClose = useCallback(()=>setShowSub(false),[]);
   const showToast  = useCallback((msg,err)=>{ setToast({msg,err}); setTimeout(()=>setToast(null),3000); },[]);
   const onCartOpen  = useCallback(()=>{ setCartOpen(true); setCartStep("items"); },[]);
   const onCartClose = useCallback(()=>setCartOpen(false),[]);
@@ -1568,13 +3070,13 @@ export default function App() {
   const onRemCart  = useCallback((id)=>setCart(c=>c.filter(i=>i.id!==id)),[]);
   const cartCount  = useMemo(()=>cart.reduce((s,i)=>s+i.qty,0),[cart]);
 
-  const onUploadImg = useCallback((id,file)=>{ if(!file)return; const r=new FileReader(); r.onload=e=>{ saveMeds(meds.map(m=>m.id===id?{...m,img:e.target.result}:m)); showToast("Photo saved ✅"); }; r.readAsDataURL(file); },[meds,saveMeds,showToast]);
-  const onRemoveImg = useCallback((id)=>{ saveMeds(meds.map(m=>m.id===id?{...m,img:null}:m)); showToast("Photo removed"); },[meds,saveMeds,showToast]);
+  const onUploadImg = useCallback((id,file)=>{ if(!file||!isAdmin)return; const r=new FileReader(); r.onload=e=>{ saveMeds(meds.map(m=>m.id===id?{...m,img:e.target.result}:m)); showToast("Photo saved ✅"); }; r.readAsDataURL(file); },[meds,saveMeds,showToast,isAdmin]);
+  const onRemoveImg = useCallback((id)=>{ if(!isAdmin)return; saveMeds(meds.map(m=>m.id===id?{...m,img:null}:m)); showToast("Photo removed"); },[meds,saveMeds,showToast,isAdmin]);
 
-  const rootStyle = useMemo(()=>({...cssVars,fontFamily:"'Nunito','Segoe UI',sans-serif",background:"var(--bg)",color:"var(--text)",minHeight:"100vh",transition:"background .3s,color .3s"}),[cssVars]);
+  const rootStyle = useMemo(()=>({...cssVars,fontFamily:"'Nunito','Segoe UI',sans-serif",background:"var(--bg)",color:"var(--text)",minHeight:"100vh",transition:"background .3s,color .3s",overflowX:"hidden",width:"100%",maxWidth:"100vw"}),[cssVars]);
 
   const renderPage = () => {
-    const common = { go, onAddCart, onToast:showToast, contact, isAdmin };
+    const common = { go, onAddCart, onToast:showToast, contact, isAdmin, onSubOpen };
     switch(page) {
       case "home":         return <HomePage         {...common} meds={meds} services={services} testimonials={testimonials} faqs={faqs} onUploadImg={onUploadImg} onRemoveImg={onRemoveImg}/>;
       case "about":        return <AboutPage        go={go} contact={contact}/>;
@@ -1583,32 +3085,37 @@ export default function App() {
       case "services":     return <ServicesPage     go={go} services={services} onAdminOpen={onAdminOpen} isAdmin={isAdmin}/>;
       case "contact":      return <ContactPage      onToast={showToast} contact={contact} onAdminOpen={onAdminOpen} isAdmin={isAdmin}/>;
       case "opening":      return <OpeningPage      contact={contact} isAdmin={isAdmin}/>;
+      case "blog":         return <BlogPage          go={go} blogs={blogs} isAdmin={isAdmin} onAdminOpen={onAdminOpen} onToast={showToast}/>;
+      case "tools":        return <ToolsPage         go={go}/>;
+      case "tracking":     return <TrackingPage      contact={contact}/>;
+      case "loyalty":      return <LoyaltyPage       go={go} contact={contact}/>;
+      case "doctors":      return <DoctorsPage       go={go} doctors={doctors} isAdmin={isAdmin} onAdminOpen={onAdminOpen} contact={contact} onToast={showToast}/>;
       default:             return <HomePage         {...common} meds={meds} services={services} testimonials={testimonials} faqs={faqs} onUploadImg={onUploadImg} onRemoveImg={onRemoveImg}/>;
     }
   };
 
   return (
     <div style={rootStyle}>
-      <Nav dark={dark} setDark={setDark} page={page} go={go} cartCount={cartCount} onCartOpen={onCartOpen} onDBOpen={onDBOpen} onAdminOpen={onAdminOpen} isAdmin={isAdmin} onLogout={handleAdminLogout}/>
+      <Nav dark={dark} setDark={setDark} page={page} go={go} cartCount={cartCount} onCartOpen={onCartOpen} onDBOpen={onDBOpen} onAdminOpen={onAdminOpen} isAdmin={isAdmin} onLogout={handleAdminLogout} onSubOpen={onSubOpen}/>
 
       <div className="page-content">{renderPage()}</div>
 
       <Footer go={go} services={services} contact={contact}/>
 
       {/* WhatsApp */}
-      <a href={`https://wa.me/91${contact.phone1}?text=Hello%20TR%20Pharmacy`} target="_blank" rel="noreferrer" title="Chat on WhatsApp" className="wa-fab" style={{ position:"fixed",bottom:24,right:24,width:52,height:52,borderRadius:26,background:"#25D366",display:"flex",alignItems:"center",justifyContent:"center",textDecoration:"none",zIndex:999 }} onMouseEnter={e=>e.currentTarget.style.transform="scale(1.12) rotate(-5deg)"} onMouseLeave={e=>e.currentTarget.style.transform="none"}><WAIcon/></a>
+      <a href={`https://wa.me/91${contact?.phone1 || '6389482072'}?text=Hello%20TR%20Pharmacy`} target="_blank" rel="noreferrer" title="Chat on WhatsApp" className="wa-fab" style={{ position:"fixed",bottom:24,right:24,width:52,height:52,borderRadius:26,background:"#25D366",display:"flex",alignItems:"center",justifyContent:"center",textDecoration:"none",zIndex:999 }} onMouseEnter={e=>e.currentTarget.style.transform="scale(1.12) rotate(-5deg)"} onMouseLeave={e=>e.currentTarget.style.transform="none"}><WAIcon/></a>
 
       {/* Bottom Nav */}
       <nav className="bottom-nav">
         <div className="bottom-nav-inner">
-          {[["home","🏠","Home"],["medicines","💊","Medicines"],["prescription","📋","Rx Upload"],["contact","📞","Contact"],["opening","✅","Opening"]].map(([p,ic,l])=>(
+          {[["home","🏠","Home"],["medicines","💊","Medicines"],["blog","📰","Blog"],["doctors","👨‍⚕️","Doctors"],["loyalty","⭐","Loyalty"]].map(([p,ic,l])=>(
             <button key={p} onClick={()=>go(p)} className={`bnav-btn${page===p?" active":""}`}><span className="icon">{ic}</span><span>{l}</span></button>
           ))}
         </div>
       </nav>
 
       {/* Toast */}
-      {toast&&<div className="toast-pop" style={{ position:"fixed",bottom:88,right:20,background:toast.err?"#ef4444":"#059669",color:"#fff",padding:"11px 18px",borderRadius:13,fontWeight:700,fontSize:13,boxShadow:"0 6px 22px rgba(0,0,0,.22)",zIndex:1000,maxWidth:270,lineHeight:1.4 }}>{toast.msg}</div>}
+      {toast&&<div className="toast-pop" style={{ position:"fixed",bottom:88,right:20,background:toast.err?"linear-gradient(135deg,#ef4444,#dc2626)":"linear-gradient(135deg,#059669,#047857)",color:"#fff",padding:"12px 20px",borderRadius:14,fontWeight:700,fontSize:13,boxShadow:"0 8px 28px rgba(0,0,0,.25)",zIndex:1000,maxWidth:300,lineHeight:1.5,display:"flex",alignItems:"center",gap:9,backdropFilter:"blur(8px)" }}><span style={{ fontSize:16 }}>{toast.err?"❌":"✅"}</span>{toast.msg}</div>}
 
       {/* Cart */}
       {cartOpen&&<CartPanel cart={cart} cartStep={cartStep} setCartStep={setCartStep} cartAddr={cartAddr} setCartAddr={setCartAddr} payMode={payMode} setPayMode={setPayMode} onClose={onCartClose} onUpdQty={onUpdQty} onRemCart={onRemCart} onGoPage={go} onToast={showToast}/>}
@@ -1620,7 +3127,10 @@ export default function App() {
       {showLogin && !isAdmin && <AdminLoginModal onSuccess={handleAdminLogin} onClose={()=>setShowLogin(false)}/>}
 
       {/* Admin Panel — only when authenticated */}
-      {showAdmin && isAdmin && <AdminPanel meds={meds} services={services} testimonials={testimonials} faqs={faqs} contact={contact} onClose={onAdminClose} onToast={showToast} onUpdateMeds={saveMeds} onUpdateServices={saveServices} onUpdateTestimonials={saveTestimonials} onUpdateFaqs={saveFaqs} onUpdateContact={saveContact} onUploadImg={onUploadImg} onLogout={handleAdminLogout}/>}
+      {showAdmin && isAdmin && <AdminPanel meds={meds} services={services} testimonials={testimonials} faqs={faqs} contact={contact} blogs={blogs} doctors={doctors} onClose={onAdminClose} onToast={showToast} onUpdateMeds={saveMeds} onUpdateServices={saveServices} onUpdateTestimonials={saveTestimonials} onUpdateFaqs={saveFaqs} onUpdateContact={saveContact} onUpdateBlogs={saveBlogs} onUpdateDoctors={saveDoctors} onUploadImg={onUploadImg} onLogout={handleAdminLogout}/>}
+
+      {/* Subscription Modal */}
+      {showSub && <SubscriptionModal onClose={onSubClose} onToast={showToast} contact={contact}/>}
     </div>
   );
 }
